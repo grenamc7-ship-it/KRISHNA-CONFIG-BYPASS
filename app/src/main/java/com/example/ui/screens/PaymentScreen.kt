@@ -32,23 +32,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.HourglassTop
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.OpenInNew
-import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,7 +57,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -90,13 +88,13 @@ fun PaymentScreen(
   userSession: UserSession,
   config: RemoteAppConfig,
   onSubmitPayment: (Uri?, String) -> Unit,
-  onSimulateAdminDecision: (Boolean) -> Unit,
   isLoading: Boolean,
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
   var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
   var upiRef by remember { mutableStateOf("") }
+  var isRetryingAfterDecline by remember { mutableStateOf(false) }
   val scrollState = rememberScrollState()
 
   // Image Picker Launcher
@@ -106,7 +104,7 @@ fun PaymentScreen(
     selectedImageUri = uri
   }
 
-  // Generate standard dynamic UPI QR image URL using quickchart QR API
+  // Generate dynamic UPI QR image URL
   val upiUrl = "upi://pay?pa=${config.upiId}&pn=${Uri.encode(config.upiName)}&am=${config.paymentAmount}&cu=INR"
   val qrCodeApiUrl = if (config.qrImageUrl.isNotBlank()) {
     config.qrImageUrl
@@ -132,27 +130,66 @@ fun PaymentScreen(
       .padding(horizontal = 20.dp, vertical = 28.dp),
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
-    Text(
-      text = "ACTIVATE YOUR PROTECTION",
-      fontSize = 22.sp,
-      fontWeight = FontWeight.ExtraBold,
-      fontFamily = FontFamily.Monospace,
-      color = BloodRedPrimary,
-      letterSpacing = 1.5.sp,
-      textAlign = TextAlign.Center
+    com.example.ui.components.BloodyTitle(
+      titleSize = 28.sp,
+      subtitle = "ACTIVATE PROTECTION • PAY VIA UPI",
+      showDrips = true,
+      dropHeight = 14.dp,
+      modifier = Modifier.padding(bottom = 18.dp)
     )
 
-    Text(
-      text = "PAY VIA UPI & UPLOAD PROOF",
-      fontSize = 12.sp,
-      fontWeight = FontWeight.SemiBold,
-      color = NeonGreenBright,
-      letterSpacing = 2.sp,
-      modifier = Modifier.padding(top = 4.dp, bottom = 18.dp)
-    )
+    // UNIQUE ACTIVATION KEY CARD (Every user gets a unique generated key)
+    if (userSession.activationKey.isNotBlank()) {
+      CyberGlassCard(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(bottom = 14.dp),
+        isGreenAccent = true
+      ) {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f)
+          ) {
+            Icon(Icons.Default.Key, contentDescription = null, tint = NeonGreenBright, modifier = Modifier.size(20.dp))
+            Column {
+              Text(
+                text = "DEVICE ACTIVATION KEY",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                color = TextMuted
+              )
+              Text(
+                text = userSession.activationKey,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontFamily = FontFamily.Monospace,
+                color = NeonGreenBright
+              )
+            }
+          }
+          IconButton(
+            onClick = {
+              val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+              val clip = ClipData.newPlainText("Activation Key", userSession.activationKey)
+              clipboard.setPrimaryClip(clip)
+              Toast.makeText(context, "Activation Key Copied!", Toast.LENGTH_SHORT).show()
+            }
+          ) {
+            Icon(Icons.Default.ContentCopy, contentDescription = "Copy Key", tint = TextWhite)
+          }
+        }
+      }
+    }
 
-    // PENDING WAITING STATE
-    if (userSession.verificationStatus == VerificationStatus.PENDING) {
+    // PENDING WAITING STATE (Awaiting ONLY Telegram Bot admin approval)
+    if (userSession.verificationStatus == VerificationStatus.PENDING && !isRetryingAfterDecline) {
       CyberGlassCard(
         modifier = Modifier.fillMaxWidth(),
         isGreenAccent = false,
@@ -160,13 +197,15 @@ fun PaymentScreen(
       ) {
         Column(
           horizontalAlignment = Alignment.CenterHorizontally,
-          modifier = Modifier.fillMaxWidth().padding(12.dp)
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp)
         ) {
           Box(
             modifier = Modifier
               .size(80.dp)
               .scale(pulseScale)
-              .background(CyberDarkBg, CircleShape)
+              .background(CyberDarkBg.copy(alpha = 0.5f), CircleShape)
               .border(2.dp, StatusPending, CircleShape),
             contentAlignment = Alignment.Center
           ) {
@@ -192,7 +231,7 @@ fun PaymentScreen(
           Spacer(modifier = Modifier.height(8.dp))
 
           Text(
-            text = "Your payment slip and device registration have been dispatched to the Telegram Admin panel. Verification updates in real-time.",
+            text = "Your device specifications and payment proof have been sent to Telegram Admin. As soon as the Admin approves on Telegram Bot, Safe Zone will unlock automatically in real-time.",
             fontSize = 12.sp,
             color = TextMuted,
             textAlign = TextAlign.Center
@@ -208,77 +247,60 @@ fun PaymentScreen(
             color = NeonGreen,
             trackColor = BloodRedDark.copy(alpha = 0.5f)
           )
-
-          Spacer(modifier = Modifier.height(24.dp))
-
-          // Developer / Evaluator quick action: Simulate Telegram Admin Approval
-          Text(
-            text = "⚡ ADMIN TEST CONTROLS",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = NeonGreenBright,
-            fontFamily = FontFamily.Monospace
-          )
-
-          Spacer(modifier = Modifier.height(8.dp))
-
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-          ) {
-            OutlinedButton(
-              onClick = { onSimulateAdminDecision(true) },
-              colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonGreen),
-              border = androidx.compose.foundation.BorderStroke(1.dp, NeonGreen),
-              modifier = Modifier.weight(1f).testTag("sim_approve_btn")
-            ) {
-              Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(16.dp))
-              Spacer(modifier = Modifier.size(6.dp))
-              Text("APPROVE", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            }
-
-            OutlinedButton(
-              onClick = { onSimulateAdminDecision(false) },
-              colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusError),
-              border = androidx.compose.foundation.BorderStroke(1.dp, StatusError),
-              modifier = Modifier.weight(1f).testTag("sim_reject_btn")
-            ) {
-              Icon(Icons.Default.Warning, null, modifier = Modifier.size(16.dp))
-              Spacer(modifier = Modifier.size(6.dp))
-              Text("REJECT", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            }
-          }
         }
       }
       return
     }
 
-    // REJECTED STATE NOTICE
+    // REJECTED / DECLINED STATE NOTICE
     if (userSession.verificationStatus == VerificationStatus.REJECTED) {
-      Box(
+      CyberGlassCard(
         modifier = Modifier
           .fillMaxWidth()
-          .background(BloodRedDark.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-          .border(1.5.dp, StatusError, RoundedCornerShape(12.dp))
-          .padding(14.dp)
+          .padding(bottom = 16.dp),
+        isGreenAccent = false,
+        pulsateGlow = true
       ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(10.dp)
+        Column(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalAlignment = Alignment.CenterHorizontally
         ) {
-          Icon(Icons.Default.Warning, null, tint = StatusError)
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+          ) {
+            Icon(Icons.Default.Warning, null, tint = StatusError, modifier = Modifier.size(26.dp))
+            Text(
+              text = "STATUS: DECLINED BY ADMIN",
+              fontSize = 14.sp,
+              fontWeight = FontWeight.Black,
+              fontFamily = FontFamily.Monospace,
+              color = StatusError
+            )
+          }
+          Spacer(modifier = Modifier.height(8.dp))
           Text(
-            text = "PAYMENT REJECTED BY ADMIN. PLEASE DOUBLE-CHECK TRANSACTION REFERENCE AND RETRY.",
+            text = "Your payment submission was declined by Admin on Telegram Bot. Please verify your UPI UTR reference or attach a clearer payment slip.",
             fontSize = 12.sp,
             color = TextWhite,
-            fontWeight = FontWeight.SemiBold
+            textAlign = TextAlign.Center
           )
+          Spacer(modifier = Modifier.height(12.dp))
+          OutlinedButton(
+            onClick = { isRetryingAfterDecline = true },
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonGreen),
+            border = androidx.compose.foundation.BorderStroke(1.dp, NeonGreen),
+            shape = RoundedCornerShape(8.dp)
+          ) {
+            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.size(6.dp))
+            Text("RE-SUBMIT PAYMENT", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+          }
         }
       }
-      Spacer(modifier = Modifier.height(16.dp))
     }
 
-    // PAYMENT FORM CARD
+    // PAYMENT FORM CARD (Glassy aesthetic)
     CyberGlassCard(
       modifier = Modifier.fillMaxWidth(),
       isGreenAccent = false,
@@ -288,7 +310,7 @@ fun PaymentScreen(
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .background(CyberDarkBg, RoundedCornerShape(12.dp))
+          .background(CyberDarkBg.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
           .border(1.dp, NeonGreen.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
           .padding(12.dp),
         contentAlignment = Alignment.Center
@@ -315,8 +337,7 @@ fun PaymentScreen(
 
       // QR Code Display
       Box(
-        modifier = Modifier
-          .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center
       ) {
         Box(
@@ -342,8 +363,8 @@ fun PaymentScreen(
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .background(CyberDarkBg.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
-          .border(1.dp, BloodRedPrimary.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+          .background(CyberDarkBg.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+          .border(1.dp, BloodRedPrimary.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
           .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -449,8 +470,8 @@ fun PaymentScreen(
           unfocusedTextColor = TextWhite,
           focusedBorderColor = NeonGreen,
           unfocusedBorderColor = TextMuted.copy(alpha = 0.4f),
-          focusedContainerColor = CyberDarkBg.copy(alpha = 0.4f),
-          unfocusedContainerColor = CyberDarkBg.copy(alpha = 0.3f)
+          focusedContainerColor = CyberDarkBg.copy(alpha = 0.35f),
+          unfocusedContainerColor = CyberDarkBg.copy(alpha = 0.25f)
         ),
         shape = RoundedCornerShape(10.dp),
         modifier = Modifier
@@ -462,7 +483,10 @@ fun PaymentScreen(
 
       // Submit Proof Button
       GlowingButton(
-        onClick = { onSubmitPayment(selectedImageUri, upiRef.trim()) },
+        onClick = {
+          isRetryingAfterDecline = false
+          onSubmitPayment(selectedImageUri, upiRef.trim())
+        },
         isGreen = false,
         enabled = !isLoading,
         testTag = "submit_payment_btn"

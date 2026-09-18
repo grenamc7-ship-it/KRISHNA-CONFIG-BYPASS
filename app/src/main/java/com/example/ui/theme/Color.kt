@@ -16,12 +16,12 @@ val NeonGreenGlow = Color(0xFF5DFF3D)
 val NeonGreenDark = Color(0xFF005A17)
 val NeonGreenMuted = Color(0xFF0E3816)
 
-// Cyber Dark & Glass Accents
+// Cyber Dark & Ultra Glass Accents (High-transparency for genuine glassy aesthetic)
 val CyberDarkBg = Color(0xFF08080C)
-val CyberCardGlass = Color(0xD910080E) // 85% opacity
-val CyberCardGlassLight = Color(0xBB180F16)
-val CyberBorderRed = Color(0x88FF0033)
-val CyberBorderGreen = Color(0x8800FF41)
+val CyberCardGlass = Color(0x730D050B) // ~45% opacity for transparent glassy look
+val CyberCardGlassLight = Color(0x55160812) // ~33% opacity for nested glass
+val CyberBorderRed = Color(0x99FF0033)
+val CyberBorderGreen = Color(0x9900FF41)
 
 // Neutral & Status
 val TextWhite = Color(0xFFF5F5F5)

@@ -59,14 +59,13 @@ fun CyberBackgroundVideo(
 
         addListener(object : Player.Listener {
           override fun onPlayerError(error: PlaybackException) {
-            Log.w(TAG, "ExoPlayer playback error encountered: ${error.errorCodeName} (${error.errorCode}): ${error.message}")
-            // Catch MediaCodec exhaustion, hardware decoder release, or decoding error
+            Log.w(TAG, "ExoPlayer playback error: ${error.errorCodeName} (${error.errorCode}): ${error.message}")
             if (error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
               error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
               error.errorCode == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED ||
               error.errorCodeName.contains("DECODER", ignoreCase = true)
             ) {
-              Log.e(TAG, "MediaCodec resource error detected. Falling back cleanly to cyberpunk gradient visuals.")
+              Log.e(TAG, "MediaCodec resource release/error detected. Falling back cleanly.")
               hasCodecError = true
             }
           }
@@ -99,7 +98,7 @@ fun CyberBackgroundVideo(
             else -> {}
           }
         } catch (e: Exception) {
-          Log.w(TAG, "Lifecycle state change exception: ${e.message}")
+          Log.w(TAG, "Lifecycle state change notice: ${e.message}")
         }
       }
     }
@@ -112,7 +111,7 @@ fun CyberBackgroundVideo(
         exoPlayer?.stop()
         exoPlayer?.release()
       } catch (e: Exception) {
-        Log.w(TAG, "ExoPlayer release exception: ${e.message}")
+        Log.w(TAG, "ExoPlayer release notice: ${e.message}")
       }
     }
   }
@@ -150,7 +149,7 @@ fun CyberBackgroundVideo(
         )
     )
 
-    // AndroidView hosting ExoPlayer PlayerView only if player is alive and no codec failure
+    // AndroidView hosting ExoPlayer PlayerView
     if (exoPlayer != null && !hasCodecError) {
       AndroidView(
         factory = { ctx ->
@@ -168,16 +167,16 @@ fun CyberBackgroundVideo(
       )
     }
 
-    // Dark cyberpunk glass vignette to ensure high text contrast
+    // Ultra-clean transparent vignette: transparent enough so video background is clearly visible behind glassy cards
     Box(
       modifier = Modifier
         .fillMaxSize()
         .background(
           Brush.radialGradient(
             colors = listOf(
-              Color(0x33000000),
-              Color(0x88080204),
-              Color(0xDD050102)
+              Color(0x10000000), // Very light central transparent tint
+              Color(0x40080204), // Subtle edge darkening
+              Color(0x75050102)  // Soft dark outer boundary
             )
           )
         )

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KRISHNA CONFIG — Admin Control Dashboard</title>
+  <title>KRISHNA CONFIG — Master Admin Panel</title>
   <!-- TailwindCSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome -->
@@ -19,6 +19,7 @@
           colors: {
             blood: {
               DEFAULT: '#FF0033',
+              glow: '#FF5252',
               dark: '#8B0000',
               deep: '#1A0005'
             },
@@ -29,8 +30,8 @@
             },
             cyber: {
               bg: '#08080C',
-              card: 'rgba(16, 8, 14, 0.85)',
-              glass: 'rgba(25, 12, 22, 0.7)'
+              card: 'rgba(20, 10, 16, 0.85)',
+              glass: 'rgba(30, 14, 25, 0.7)'
             }
           }
         }
@@ -42,66 +43,89 @@
       background-color: #08080C;
       color: #F5F5F5;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background-image: radial-gradient(circle at 50% 0%, rgba(255, 0, 51, 0.12), transparent 70%),
+                        radial-gradient(circle at 100% 100%, rgba(0, 255, 65, 0.05), transparent 60%);
+      background-attachment: fixed;
     }
     .neon-glow {
-      box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+      box-shadow: 0 0 15px rgba(0, 255, 65, 0.25);
     }
     .blood-glow {
-      box-shadow: 0 0 15px rgba(255, 0, 51, 0.3);
+      box-shadow: 0 0 20px rgba(255, 0, 51, 0.35);
+    }
+    .frosted {
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .bloody-title {
+      background: linear-gradient(180deg, #FF5252 0%, #FF0033 45%, #B71C1C 75%, #5A000E 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 12px rgba(255, 0, 51, 0.6));
     }
   </style>
 </head>
-<body class="min-h-screen bg-cyber-bg text-gray-100 flex flex-col">
+<body class="min-h-screen bg-cyber-bg text-gray-100 flex flex-col selection:bg-blood selection:text-white">
 
   <!-- NAVBAR -->
-  <header class="border-b border-blood-dark/60 bg-black/60 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+  <header class="border-b border-blood-dark/60 bg-black/70 frosted px-6 py-4 flex items-center justify-between sticky top-0 z-50">
     <div class="flex items-center space-x-3">
-      <div class="w-9 h-9 rounded-full bg-blood-deep border border-neon flex items-center justify-center neon-glow">
-        <i class="fa-solid fa-shield-halved text-neon text-lg"></i>
+      <div class="w-10 h-10 rounded-xl bg-blood-deep border border-neon flex items-center justify-center neon-glow">
+        <i class="fa-solid fa-shield-halved text-neon text-xl"></i>
       </div>
       <div>
-        <h1 class="font-black tracking-widest text-lg text-white">KRISHNA CONFIG</h1>
-        <p class="text-xs text-neon tracking-wider font-semibold">WEB ADMIN CONTROL PANEL</p>
+        <h1 class="font-black tracking-widest text-lg bloody-title">KRISHNA CONFIG</h1>
+        <p class="text-[11px] text-neon tracking-wider font-semibold">MASTER ADMIN WEB PANEL</p>
       </div>
     </div>
-    <div class="flex items-center space-x-4" id="nav-auth-section">
-      <span id="admin-user-display" class="text-xs text-gray-400 hidden"></span>
-      <button id="logout-btn" class="hidden text-xs bg-red-950/80 border border-blood text-red-300 px-3 py-1.5 rounded hover:bg-red-900 transition">
+    <div class="flex items-center space-x-3" id="nav-auth-section">
+      <span id="admin-user-display" class="text-xs text-gray-300 font-bold bg-black/60 border border-gray-800 px-3 py-1.5 rounded-lg hidden"></span>
+      <button id="open-pass-modal-btn" class="hidden text-xs bg-black/60 border border-neon/50 text-neon px-3 py-1.5 rounded-lg hover:bg-neon/20 transition">
+        <i class="fa-solid fa-key mr-1"></i> CHANGE CREDENTIALS
+      </button>
+      <button id="logout-btn" class="hidden text-xs bg-red-950/80 border border-blood text-red-300 px-3 py-1.5 rounded-lg hover:bg-red-900 transition">
         <i class="fa-solid fa-right-from-bracket mr-1"></i> LOGOUT
       </button>
     </div>
   </header>
 
-  <!-- LOGIN MODAL / SCREEN -->
+  <!-- LOGIN SCREEN -->
   <div id="login-section" class="flex-1 flex items-center justify-center p-6">
-    <div class="w-full max-w-md bg-cyber-card border border-blood/60 rounded-2xl p-8 blood-glow backdrop-blur">
+    <div class="w-full max-w-md bg-cyber-card border border-blood/60 rounded-2xl p-8 blood-glow frosted">
       <div class="text-center mb-6">
-        <i class="fa-solid fa-lock text-3xl text-blood mb-2"></i>
-        <h2 class="text-xl font-bold tracking-wider text-white">ADMIN AUTHORIZATION</h2>
-        <p class="text-xs text-gray-400 mt-1">Authenticate to access master controls</p>
+        <div class="w-14 h-14 mx-auto rounded-full bg-blood-deep border border-blood flex items-center justify-center blood-glow mb-3">
+          <i class="fa-solid fa-lock text-2xl text-blood"></i>
+        </div>
+        <h2 class="text-2xl font-black tracking-widest bloody-title">KRISHNA CONFIG</h2>
+        <p class="text-xs text-neon font-bold tracking-wider mt-1">ADMIN AUTHORIZATION</p>
+        <p class="text-[11px] text-gray-400 mt-2">Enter your master administrator credentials to access the console.</p>
       </div>
 
       <div class="space-y-4">
         <div>
-          <label class="text-xs text-gray-300 block mb-1">ADMIN EMAIL</label>
-          <input type="email" id="login-email" class="w-full bg-black/50 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:border-neon focus:outline-none" placeholder="admin@krishnaconfig.com" />
+          <label class="text-xs text-gray-300 font-bold block mb-1">ADMIN USERNAME</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+              <i class="fa-solid fa-user"></i>
+            </span>
+            <input type="text" id="login-username" class="w-full bg-black/60 border border-gray-700 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white focus:border-neon focus:outline-none" placeholder="KRISHNA@143" value="KRISHNA@143" />
+          </div>
         </div>
         <div>
-          <label class="text-xs text-gray-300 block mb-1">PASSWORD</label>
-          <input type="password" id="login-pass" class="w-full bg-black/50 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:border-neon focus:outline-none" placeholder="••••••••" />
+          <label class="text-xs text-gray-300 font-bold block mb-1">PASSWORD</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+              <i class="fa-solid fa-lock"></i>
+            </span>
+            <input type="password" id="login-pass" class="w-full bg-black/60 border border-gray-700 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white focus:border-neon focus:outline-none" placeholder="CONFIG@1432" value="CONFIG@1432" />
+          </div>
         </div>
-        <button id="login-btn" class="w-full bg-neon text-black font-bold py-2.5 rounded-lg text-sm tracking-wider hover:bg-neon-bright transition flex items-center justify-center space-x-2 neon-glow">
+
+        <div id="login-error-msg" class="text-xs text-blood bg-blood-deep/40 border border-blood/50 p-2.5 rounded-lg hidden font-bold"></div>
+
+        <button id="login-btn" class="w-full bg-neon text-black font-black py-3 rounded-xl text-sm tracking-wider hover:bg-neon-bright transition flex items-center justify-center space-x-2 neon-glow">
           <i class="fa-solid fa-key"></i>
-          <span>ENTER CONTROL PANEL</span>
-        </button>
-        <div class="relative flex py-1 items-center">
-          <div class="flex-grow border-t border-gray-800"></div>
-          <span class="flex-shrink mx-2 text-[10px] text-gray-500 uppercase tracking-widest">OR</span>
-          <div class="flex-grow border-t border-gray-800"></div>
-        </div>
-        <button id="direct-access-btn" class="w-full bg-blood-deep/60 border border-blood/60 text-red-300 font-bold py-2 rounded-lg text-xs tracking-wider hover:bg-blood hover:text-white transition flex items-center justify-center space-x-2">
-          <i class="fa-solid fa-unlock-keyhole"></i>
-          <span>DIRECT ADMIN OVERRIDE</span>
+          <span>ENTER ADMIN PANEL</span>
         </button>
       </div>
     </div>
@@ -112,171 +136,220 @@
 
     <!-- METRICS CARDS -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-cyber-card border border-blood/50 rounded-xl p-4 blood-glow">
+      <div class="bg-cyber-card border border-blood/50 rounded-xl p-4 blood-glow frosted">
         <div class="flex items-center justify-between">
           <span class="text-xs text-gray-400 font-semibold uppercase">Total Users</span>
-          <i class="fa-solid fa-users text-blood"></i>
+          <i class="fa-solid fa-users text-blood text-lg"></i>
         </div>
         <div id="stat-total-users" class="text-2xl font-black text-white mt-2">0</div>
-        <div class="text-[11px] text-gray-500 mt-1">Registered clients</div>
+        <div class="text-[11px] text-gray-500 mt-1">Registered clients in database</div>
       </div>
 
-      <div class="bg-cyber-card border border-neon/50 rounded-xl p-4 neon-glow">
+      <div class="bg-cyber-card border border-neon/50 rounded-xl p-4 neon-glow frosted">
         <div class="flex items-center justify-between">
           <span class="text-xs text-gray-400 font-semibold uppercase">Online Now</span>
-          <i class="fa-solid fa-circle-dot text-neon animate-pulse"></i>
+          <i class="fa-solid fa-circle-dot text-neon animate-pulse text-lg"></i>
         </div>
         <div id="stat-online-users" class="text-2xl font-black text-neon mt-2">0</div>
-        <div class="text-[11px] text-gray-500 mt-1">Real-time active devices</div>
+        <div class="text-[11px] text-gray-500 mt-1">Real-time connected rigs</div>
       </div>
 
-      <div class="bg-cyber-card border border-yellow-500/50 rounded-xl p-4">
+      <div class="bg-cyber-card border border-yellow-500/50 rounded-xl p-4 frosted">
         <div class="flex items-center justify-between">
           <span class="text-xs text-gray-400 font-semibold uppercase">Pending Payments</span>
-          <i class="fa-solid fa-clock text-yellow-400"></i>
+          <i class="fa-solid fa-clock text-yellow-400 text-lg"></i>
         </div>
         <div id="stat-pending-payments" class="text-2xl font-black text-yellow-400 mt-2">0</div>
-        <div class="text-[11px] text-gray-500 mt-1">Awaiting approval</div>
+        <div class="text-[11px] text-gray-500 mt-1">Waiting for approval</div>
       </div>
 
-      <div class="bg-cyber-card border border-green-500/50 rounded-xl p-4">
+      <div class="bg-cyber-card border border-green-500/50 rounded-xl p-4 frosted">
         <div class="flex items-center justify-between">
-          <span class="text-xs text-gray-400 font-semibold uppercase">Approved</span>
-          <i class="fa-solid fa-circle-check text-green-400"></i>
+          <span class="text-xs text-gray-400 font-semibold uppercase">Approved Licenses</span>
+          <i class="fa-solid fa-circle-check text-green-400 text-lg"></i>
         </div>
         <div id="stat-approved-payments" class="text-2xl font-black text-green-400 mt-2">0</div>
-        <div class="text-[11px] text-gray-500 mt-1">Safe zone activated</div>
+        <div class="text-[11px] text-gray-500 mt-1">Safe zone unlocked</div>
       </div>
     </div>
 
     <!-- PENDING APPROVALS QUEUE -->
-    <div class="bg-cyber-card border border-blood/50 rounded-xl p-5">
+    <div class="bg-cyber-card border border-blood/50 rounded-xl p-5 frosted blood-glow">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center space-x-2">
-          <i class="fa-solid fa-receipt text-blood text-lg"></i>
-          <h3 class="text-base font-bold text-white tracking-wider">PAYMENT APPROVAL QUEUE</h3>
+          <i class="fa-solid fa-receipt text-blood text-xl"></i>
+          <div>
+            <h3 class="text-base font-black text-white tracking-wider">REAL-TIME PAYMENT & ACTIVATION QUEUE</h3>
+            <p class="text-xs text-gray-400">All submissions from Android rigs sync instantly with Telegram Bot</p>
+          </div>
         </div>
-        <button id="refresh-payments-btn" class="text-xs text-neon border border-neon/50 px-2.5 py-1 rounded hover:bg-neon/10">
-          <i class="fa-solid fa-rotate-right mr-1"></i> Refresh
+        <button id="refresh-payments-btn" class="text-xs text-neon border border-neon/50 px-3 py-1.5 rounded-lg hover:bg-neon/10 transition flex items-center space-x-1">
+          <i class="fa-solid fa-rotate-right"></i>
+          <span>Refresh</span>
         </button>
       </div>
 
       <div id="pending-list" class="space-y-3">
-        <p class="text-xs text-gray-500 italic">Checking for submissions...</p>
+        <p class="text-xs text-gray-500 italic py-3">Listening for payment submissions...</p>
       </div>
     </div>
 
     <!-- SETTINGS & CONTROLS GRID -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-      <!-- APP CONFIGURATION -->
-      <div class="bg-cyber-card border border-neon/50 rounded-xl p-5 neon-glow space-y-4">
+      <!-- APP REMOTE CONFIGURATION -->
+      <div class="bg-cyber-card border border-neon/50 rounded-xl p-5 neon-glow frosted space-y-4">
         <div class="flex items-center space-x-2">
-          <i class="fa-solid fa-sliders text-neon"></i>
-          <h3 class="text-base font-bold text-white tracking-wider">APP REMOTE CONFIGURATION</h3>
+          <i class="fa-solid fa-sliders text-neon text-lg"></i>
+          <h3 class="text-base font-black text-white tracking-wider">APP REMOTE CONFIGURATION</h3>
         </div>
 
         <div class="space-y-3 text-xs">
           <div>
-            <label class="block text-gray-400 mb-1">UPI ID</label>
-            <input type="text" id="cfg-upi-id" class="w-full bg-black/60 border border-gray-700 rounded px-3 py-2 text-white" />
+            <label class="block text-gray-300 font-bold mb-1">UPI ID (FOR CLIENT PAYMENTS)</label>
+            <input type="text" id="cfg-upi-id" class="w-full bg-black/60 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono focus:border-neon focus:outline-none" />
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-gray-400 mb-1">ACTIVATION AMOUNT (₹)</label>
-              <input type="text" id="cfg-amount" class="w-full bg-black/60 border border-gray-700 rounded px-3 py-2 text-white" />
+              <label class="block text-gray-300 font-bold mb-1">ACTIVATION AMOUNT (₹)</label>
+              <input type="text" id="cfg-amount" class="w-full bg-black/60 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono focus:border-neon focus:outline-none" />
             </div>
             <div>
-              <label class="block text-gray-400 mb-1">UPI QR IMAGE URL</label>
-              <input type="text" id="cfg-qr" class="w-full bg-black/60 border border-gray-700 rounded px-3 py-2 text-white" />
+              <label class="block text-gray-300 font-bold mb-1">UPI QR IMAGE URL</label>
+              <input type="text" id="cfg-qr" class="w-full bg-black/60 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono focus:border-neon focus:outline-none" />
             </div>
           </div>
 
           <div>
-            <label class="block text-gray-400 mb-1">BACKGROUND VIDEO URLS (COMMA-SEPARATED)</label>
-            <textarea id="cfg-videos" rows="2" class="w-full bg-black/60 border border-gray-700 rounded px-3 py-2 text-white"></textarea>
+            <label class="block text-gray-300 font-bold mb-1">BACKGROUND VIDEO URLS (COMMA-SEPARATED MP4)</label>
+            <textarea id="cfg-videos" rows="2" class="w-full bg-black/60 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono focus:border-neon focus:outline-none"></textarea>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-gray-400 mb-1">WHATSAPP NUMBER</label>
-              <input type="text" id="cfg-wa" class="w-full bg-black/60 border border-gray-700 rounded px-3 py-2 text-white" />
+              <label class="block text-gray-300 font-bold mb-1">WHATSAPP NUMBER</label>
+              <input type="text" id="cfg-wa" class="w-full bg-black/60 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono focus:border-neon focus:outline-none" />
             </div>
             <div>
-              <label class="block text-gray-400 mb-1">TELEGRAM HANDLE</label>
-              <input type="text" id="cfg-tg" class="w-full bg-black/60 border border-gray-700 rounded px-3 py-2 text-white" />
+              <label class="block text-gray-300 font-bold mb-1">TELEGRAM HANDLE</label>
+              <input type="text" id="cfg-tg" class="w-full bg-black/60 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono focus:border-neon focus:outline-none" />
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-gray-400 mb-1">TELEGRAM BOT TOKEN</label>
-              <input type="password" id="cfg-bot-token" class="w-full bg-black/60 border border-gray-700 rounded px-3 py-2 text-white" />
+              <label class="block text-gray-300 font-bold mb-1">TELEGRAM BOT TOKEN</label>
+              <input type="password" id="cfg-bot-token" class="w-full bg-black/60 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono focus:border-neon focus:outline-none" />
             </div>
             <div>
-              <label class="block text-gray-400 mb-1">ADMIN CHAT ID</label>
-              <input type="text" id="cfg-admin-chat" class="w-full bg-black/60 border border-gray-700 rounded px-3 py-2 text-white" />
+              <label class="block text-gray-300 font-bold mb-1">TELEGRAM ADMIN CHAT ID</label>
+              <input type="text" id="cfg-admin-chat" class="w-full bg-black/60 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono focus:border-neon focus:outline-none" />
             </div>
           </div>
 
           <div class="flex items-center space-x-6 pt-2">
             <label class="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" id="cfg-antihack" class="rounded text-neon" />
-              <span class="text-white">Anti-Hack Active</span>
+              <input type="checkbox" id="cfg-antihack" class="w-4 h-4 rounded text-neon focus:ring-0" />
+              <span class="text-white font-bold">Anti-Hack Protection Active</span>
             </label>
             <label class="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" id="cfg-maintenance" class="rounded text-blood" />
-              <span class="text-white">Maintenance Mode</span>
+              <input type="checkbox" id="cfg-maintenance" class="w-4 h-4 rounded text-blood focus:ring-0" />
+              <span class="text-white font-bold">Maintenance Mode</span>
             </label>
           </div>
 
-          <button id="save-config-btn" class="w-full bg-neon text-black font-bold py-2 rounded text-xs tracking-wider hover:bg-neon-bright transition">
-            SAVE APP CONFIGURATION
+          <button id="save-config-btn" class="w-full bg-neon text-black font-black py-2.5 rounded-lg text-xs tracking-wider hover:bg-neon-bright transition shadow-lg">
+            SAVE & BROADCAST CONFIG TO ALL APPS
           </button>
         </div>
       </div>
 
-      <!-- USER MANAGEMENT & BLACKLIST -->
-      <div class="bg-cyber-card border border-blood/50 rounded-xl p-5 space-y-4">
+      <!-- USER MANAGEMENT & HARDWARE RIGS -->
+      <div class="bg-cyber-card border border-blood/50 rounded-xl p-5 frosted space-y-4">
         <div class="flex items-center space-x-2">
-          <i class="fa-solid fa-user-gear text-blood"></i>
-          <h3 class="text-base font-bold text-white tracking-wider">USER & BLACKLIST MANAGEMENT</h3>
+          <i class="fa-solid fa-user-gear text-blood text-lg"></i>
+          <h3 class="text-base font-black text-white tracking-wider">CLIENT RIGS & HARDWARE LICENSES</h3>
         </div>
 
-        <!-- Add User Form -->
+        <!-- Manual user add -->
         <div class="p-3 bg-black/40 border border-gray-800 rounded-lg space-y-2 text-xs">
-          <p class="font-bold text-gray-300">MANUALLY PROVISION CLIENT</p>
-          <div class="grid grid-cols-2 gap-2">
-            <input type="email" id="new-user-email" placeholder="client@gmail.com" class="bg-black/60 border border-gray-700 rounded px-2.5 py-1.5 text-white" />
-            <input type="password" id="new-user-pass" placeholder="Password (min 6)" class="bg-black/60 border border-gray-700 rounded px-2.5 py-1.5 text-white" />
-          </div>
-          <button id="create-user-btn" class="w-full bg-blood text-white font-bold py-1.5 rounded hover:bg-blood-dark transition">
-            CREATE & UNLOCK CLIENT
-          </button>
-        </div>
-
-        <!-- Blacklist Tool -->
-        <div class="p-3 bg-black/40 border border-gray-800 rounded-lg space-y-2 text-xs">
-          <p class="font-bold text-gray-300">DEVICE UID BLACKLIST TOOL</p>
+          <p class="font-bold text-gray-300">MANUALLY UNLOCK CLIENT BY EMAIL</p>
           <div class="flex space-x-2">
-            <input type="text" id="blacklist-uid" placeholder="Device UID" class="flex-1 bg-black/60 border border-gray-700 rounded px-2.5 py-1.5 text-white" />
-            <button id="add-blacklist-btn" class="bg-red-800 text-white px-3 py-1.5 rounded font-bold hover:bg-red-700">BLACKLIST</button>
-            <button id="rm-blacklist-btn" class="bg-gray-800 text-neon px-3 py-1.5 rounded font-bold hover:bg-gray-700">UNBAN</button>
+            <input type="email" id="new-user-email" placeholder="client@gmail.com" class="flex-1 bg-black/60 border border-gray-700 rounded-lg px-3 py-2 text-white" />
+            <button id="create-user-btn" class="bg-blood text-white font-bold px-4 py-2 rounded-lg hover:bg-blood-dark transition">
+              UNLOCK USER
+            </button>
           </div>
         </div>
 
-        <!-- Recent Users Table -->
+        <!-- Blacklist tool -->
+        <div class="p-3 bg-black/40 border border-gray-800 rounded-lg space-y-2 text-xs">
+          <p class="font-bold text-gray-300">DEVICE UID BLACKLIST FILTER</p>
+          <div class="flex space-x-2">
+            <input type="text" id="blacklist-uid" placeholder="Device UID" class="flex-1 bg-black/60 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono" />
+            <button id="add-blacklist-btn" class="bg-red-800 text-white px-3 py-2 rounded-lg font-bold hover:bg-red-700">BAN</button>
+            <button id="rm-blacklist-btn" class="bg-gray-800 text-neon px-3 py-2 rounded-lg font-bold hover:bg-gray-700">UNBAN</button>
+          </div>
+        </div>
+
+        <!-- Registered users table -->
         <div>
-          <p class="text-xs text-gray-400 font-semibold mb-2">REGISTERED CLIENTS (LIVE)</p>
-          <div class="max-h-44 overflow-y-auto text-xs divide-y divide-gray-800" id="users-table-body">
-            <p class="text-gray-500 py-2">Loading users...</p>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs text-gray-400 font-bold uppercase">REGISTERED CLIENTS & ACTIVATION KEYS</p>
+            <span id="users-count-tag" class="text-[11px] text-neon bg-black/50 border border-neon/30 px-2 py-0.5 rounded">0 Rigs</span>
+          </div>
+          <div class="max-h-56 overflow-y-auto text-xs divide-y divide-gray-800 bg-black/40 border border-gray-800 rounded-lg p-2" id="users-table-body">
+            <p class="text-gray-500 py-2 text-center">Loading users...</p>
           </div>
         </div>
       </div>
 
     </div>
   </main>
+
+  <!-- CHANGE CREDENTIALS MODAL -->
+  <div id="change-pass-modal" class="fixed inset-0 bg-black/80 frosted flex items-center justify-center p-4 z-50 hidden">
+    <div class="w-full max-w-md bg-cyber-card border border-neon/60 rounded-2xl p-6 frosted neon-glow">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-key text-neon text-lg"></i>
+          <h3 class="text-base font-black text-white tracking-wider">CHANGE ADMIN CREDENTIALS</h3>
+        </div>
+        <button id="close-pass-modal-btn" class="text-gray-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-gray-300 font-bold mb-1">NEW ADMIN USERNAME</label>
+          <input type="text" id="new-admin-user" class="w-full bg-black/60 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono focus:border-neon focus:outline-none" placeholder="KRISHNA@143" />
+        </div>
+
+        <div>
+          <label class="block text-gray-300 font-bold mb-1">NEW PASSWORD</label>
+          <input type="password" id="new-admin-pass" class="w-full bg-black/60 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono focus:border-neon focus:outline-none" placeholder="Enter new password" />
+        </div>
+
+        <div>
+          <label class="block text-gray-300 font-bold mb-1">CONFIRM NEW PASSWORD</label>
+          <input type="password" id="new-admin-pass-confirm" class="w-full bg-black/60 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono focus:border-neon focus:outline-none" placeholder="Re-enter new password" />
+        </div>
+
+        <div id="change-cred-msg" class="text-xs p-2 rounded hidden font-bold"></div>
+
+        <div class="flex space-x-2 pt-2">
+          <button id="save-new-cred-btn" class="flex-1 bg-neon text-black font-black py-2.5 rounded-lg text-xs tracking-wider hover:bg-neon-bright transition">
+            UPDATE CREDENTIALS
+          </button>
+          <button id="cancel-cred-btn" class="px-4 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 text-xs font-bold">
+            CANCEL
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

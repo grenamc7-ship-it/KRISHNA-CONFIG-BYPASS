@@ -61,58 +61,114 @@ def is_admin(user_id: int) -> bool:
     return str(user_id) == str(ADMIN_CHAT_ID)
 
 
-def get_admin_keyboard() -> InlineKeyboardMarkup:
-    keyboard = [
-        [
-            InlineKeyboardButton("📊 View Stats", callback_data="cmd_stats"),
-            InlineKeyboardButton("⏳ Pending Payments", callback_data="cmd_pending"),
-        ],
-        [
-            InlineKeyboardButton("👥 List Users", callback_data="cmd_listusers"),
-            InlineKeyboardButton("🟢 Online Users", callback_data="cmd_online"),
-        ],
-        [
-            InlineKeyboardButton("🛡️ Anti-Hack Toggle", callback_data="cmd_antihack_toggle"),
-            InlineKeyboardButton("⚠️ Maintenance Toggle", callback_data="cmd_maint_toggle"),
-        ],
-        [
-            InlineKeyboardButton("📞 Contact Info", callback_data="cmd_details"),
-            InlineKeyboardButton("🔄 Refresh Status", callback_data="cmd_refresh"),
-        ],
-    ]
-    return InlineKeyboardMarkup(keyboard)
-
-
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not is_admin(update.effective_user.id):
-        await update.message.reply_text("⛔ Unauthorized access.")
+        await update.message.reply_text("⛔ Unauthorized. This is a private Admin Bot for Krishna Config.")
         return
 
-    text = (
-        "⚡ *KRISHNA CONFIG — ADMIN CONTROL PANEL* ⚡\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "Welcome Admin! You have 100% full control over the mobile application.\n\n"
-        "🛠 *QUICK COMMANDS:*\n"
-        "`/stats` — Real-time analytics\n"
-        "`/pending` — Pending payments queue\n"
-        "`/setqr <image_url>` — Change UPI QR code\n"
-        "`/setupi <upi_id>` — Change UPI ID\n"
-        "`/setamount <price>` — Change activation price\n"
-        "`/setvideo <url1,url2>` — Update looping background videos\n"
-        "`/setcontact <wa> <tg>` — Update WhatsApp & Telegram handles\n"
-        "`/adduser <email> <pass>` — Create user manually\n"
-        "`/deluser <email>` — Delete user\n"
-        "`/listusers` — List registered users\n"
-        "`/blacklist <uid>` — Blacklist device UID\n"
-        "`/removeblacklist <uid>` — Unblacklist device UID\n"
-        "`/antihack on|off` — Toggle anti-hack defense\n"
-        "`/maintenance on|off` — Toggle maintenance\n"
-        "`/broadcast <msg>` — Send push message to all users\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    welcome_text = (
+        "⚡ *KRISHNA CONFIG MASTER ADMIN BOT* ⚡\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "Welcome Admin! You have total command and control over the Krishna Config Android client.\n\n"
+        "📋 *COMMANDS:*\n"
+        "• `/pending` - View pending payment activation requests\n"
+        "• `/approve <uid>` - Instantly approve access & unlock Safe Zone\n"
+        "• `/decline <uid>` or `/reject <uid>` - Decline & revoke user access\n"
+        "• `/listusers` - List all registered user rigs & activation keys\n"
+        "• `/stats` - Live system telemetry & stats\n"
+        "• `/setamount <amount>` - Change activation fee (e.g. `/setamount 499`)\n"
+        "• `/setupi <upi_id>` - Update UPI ID\n"
+        "• `/setqr <image_url>` - Update QR code URL\n"
+        "• `/setvideo <url1,url2>` - Update live background video URLs\n"
+        "• `/broadcast <message>` - Push alert to all rigs\n"
+        "• `/deluser <email>` - Delete user account\n"
+        "• `/blacklist <uid>` - Flag / blacklist suspicious device\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     )
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("⏳ PENDING VERIFICATIONS", callback_data="cmd_pending"),
+        ],
+        [
+            InlineKeyboardButton("👥 ALL USERS", callback_data="cmd_listusers"),
+            InlineKeyboardButton("📊 SYSTEM STATS", callback_data="cmd_stats"),
+        ]
+    ])
+
     await update.message.reply_text(
-        text, parse_mode=ParseMode.MARKDOWN, reply_markup=get_admin_keyboard()
+        welcome_text,
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=keyboard,
     )
+
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not is_admin(update.effective_user.id):
+        return
+
+    try:
+        users_count = len(list(db.collection("users").stream()))
+        pending_count = len(list(db.collection("payments").where("status", "==", "pending").stream()))
+        approved_count = len(list(db.collection("payments").where("status", "==", "approved").stream()))
+
+        stats_text = (
+            "📊 *KRISHNA CONFIG LIVE SYSTEM STATS*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👥 *Total Registered Rigs:* `{users_count}`\n"
+            f"⏳ *Pending Payments:* `{pending_count}`\n"
+            f"✅ *Approved Active Licenses:* `{approved_count}`\n"
+            f"🛡️ *Antihack Engine:* `ACTIVE`\n"
+            f"💎 *Firebase Realtime Sync:* `ONLINE`\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        )
+    except Exception as e:
+        stats_text = f"📊 *System Stats Alert:* `{e}`"
+
+    if update.callback_query:
+        await update.callback_query.message.reply_text(stats_text, parse_mode=ParseMode.MARKDOWN)
+    else:
+        await update.message.reply_text(stats_text, parse_mode=ParseMode.MARKDOWN)
+
+
+async def approve_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not is_admin(update.effective_user.id):
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: `/approve <user_id>`", parse_mode=ParseMode.MARKDOWN)
+        return
+
+    uid = context.args[0]
+    try:
+        db.collection("users").document(uid).set({"verified": True, "status": "approved"}, merge=True)
+        db.collection("payments").document(uid).set({"status": "approved"}, merge=True)
+        await update.message.reply_text(
+            f"✅ *USER APPROVED & ACTIVATED!*\n🆔 UID: `{uid}`\nSafe Zone has unlocked instantly on their rig.",
+            parse_mode=ParseMode.MARKDOWN
+        )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error approving user: {e}")
+
+
+async def reject_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not is_admin(update.effective_user.id):
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: `/decline <user_id>` or `/reject <user_id>`", parse_mode=ParseMode.MARKDOWN)
+        return
+
+    uid = context.args[0]
+    try:
+        db.collection("users").document(uid).set({"verified": False, "status": "rejected"}, merge=True)
+        db.collection("payments").document(uid).set({"status": "rejected"}, merge=True)
+        await update.message.reply_text(
+            f"❌ *USER DECLINED!*\n🆔 UID: `{uid}`\nAccess has been locked/declined on the client app.",
+            parse_mode=ParseMode.MARKDOWN
+        )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error declining user: {e}")
 
 
 async def setqr_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -160,32 +216,25 @@ async def setvideo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await update.message.reply_text(f"✅ *Updated {len(urls)} background video(s).*")
 
 
-async def setcontact_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not is_admin(update.effective_user.id):
         return
-    if len(context.args) < 2:
-        await update.message.reply_text("Usage: `/setcontact 8383901428 @KRISHNACONFIIG`", parse_mode=ParseMode.MARKDOWN)
+    if not context.args:
+        await update.message.reply_text("Usage: `/broadcast <message>`", parse_mode=ParseMode.MARKDOWN)
         return
-    wa, tg = context.args[0], context.args[1]
-    db.collection("settings").document("config").set({"whatsappNumber": wa, "telegramHandle": tg}, merge=True)
-    await update.message.reply_text(f"✅ *Contacts Updated:*\nWhatsApp: `{wa}`\nTelegram: `{tg}`", parse_mode=ParseMode.MARKDOWN)
-
-
-async def adduser_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_admin(update.effective_user.id):
-        return
-    if len(context.args) < 2:
-        await update.message.reply_text("Usage: `/adduser user@gmail.com pass123`", parse_mode=ParseMode.MARKDOWN)
-        return
-    email, password = context.args[0], context.args[1]
+    msg = " ".join(context.args)
     try:
-        user = auth.create_user(email=email, password=password)
-        db.collection("users").document(user.uid).set(
-            {"userId": user.uid, "email": email, "verified": True, "status": "approved"}
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title="⚡ Krishna Config Notice",
+                body=msg,
+            ),
+            topic="all_users",
         )
-        await update.message.reply_text(f"✅ *User Created & Activated:*\n`{email}` (UID: `{user.uid}`)", parse_mode=ParseMode.MARKDOWN)
+        messaging.send(message)
+        await update.message.reply_text(f"📢 *Push broadcast dispatched:* {msg}")
     except Exception as e:
-        await update.message.reply_text(f"❌ Error creating user: {e}")
+        await update.message.reply_text(f"Broadcast notice: {e}")
 
 
 async def deluser_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -207,48 +256,82 @@ async def deluser_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def listusers_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not is_admin(update.effective_user.id):
         return
-    docs = db.collection("users").limit(30).stream()
-    lines = ["👥 *REGISTERED USERS:*"]
-    for doc in docs:
-        d = doc.to_dict()
-        email = d.get("email", "unknown")
-        status = "✅" if d.get("verified") else "⏳"
-        device = d.get("deviceName", "No Rig")
-        lines.append(f"{status} `{email}` | {device}")
-    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.MARKDOWN)
+    try:
+        docs = db.collection("users").limit(30).stream()
+        lines = ["👥 *REGISTERED USERS & HARDWARE RIGS:*"]
+        count = 0
+        for doc in docs:
+            count += 1
+            d = doc.to_dict()
+            email = d.get("email", "unknown")
+            status = "✅ APPROVED" if d.get("status") == "approved" or d.get("verified") else ("❌ DECLINED" if d.get("status") == "rejected" else "⏳ PENDING")
+            device = d.get("deviceName", d.get("deviceModel", "No Rig"))
+            key = d.get("activationKey", "N/A")
+            android = d.get("androidVersion", "N/A")
+            lines.append(f"• `{email}` [{status}]\n  📱 Device: `{device}` | OS: `{android}`\n  🔑 Key: `{key}`\n")
+
+        if count == 0:
+            lines.append("_No registered users found yet._")
+
+        text = "\n".join(lines)
+    except Exception as e:
+        text = f"❌ Error querying users: {e}"
+
+    if update.callback_query:
+        await update.callback_query.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+    else:
+        await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
 
 async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not is_admin(update.effective_user.id):
         return
-    docs = db.collection("payments").where("status", "==", "pending").stream()
-    count = 0
-    for doc in docs:
-        count += 1
-        d = doc.to_dict()
-        uid = d.get("userId", "")
-        text = (
-            f"⏳ *PENDING APPROVAL*\n"
-            f"👤 User: `{d.get('email')}`\n"
-            f"📱 Device: `{d.get('deviceName')}`\n"
-            f"💳 UPI Ref: `{d.get('upiRef')}`\n"
-            f"💰 Amount: ₹`{d.get('amount')}`\n"
-            f"🆔 UID: `{uid}`"
-        )
-        keyboard = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("✅ APPROVE", callback_data=f"approve:{uid}"),
-                InlineKeyboardButton("❌ REJECT", callback_data=f"reject:{uid}"),
-            ]
-        ])
-        screenshot_url = d.get("screenshotUrl")
-        if screenshot_url:
-            await update.message.reply_photo(photo=screenshot_url, caption=text, parse_mode=ParseMode.MARKDOWN, reply_markup=keyboard)
-        else:
-            await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=keyboard)
+    try:
+        docs = db.collection("payments").where("status", "==", "pending").stream()
+        count = 0
+        for doc in docs:
+            count += 1
+            d = doc.to_dict()
+            uid = d.get("userId", "")
+            text = (
+                f"⏳ *PENDING ACTIVATION REQUEST*\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"👤 *User:* `{d.get('email')}`\n"
+                f"📱 *Device Name:* `{d.get('deviceName')}`\n"
+                f"🤖 *Android Version:* `{d.get('androidVersion')}`\n"
+                f"📱 *Model:* `{d.get('deviceModel')}`\n"
+                f"⚙️ *OS Build:* `{d.get('osVersion')}`\n"
+                f"💳 *UPI Ref:* `{d.get('upiRef')}`\n"
+                f"💰 *Amount:* ₹`{d.get('amount')}`\n"
+                f"🔑 *ACTIVATION KEY:* `{d.get('activationKey')}`\n"
+                f"🆔 *UID:* `{uid}`\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            )
+            keyboard = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("✅ APPROVE", callback_data=f"approve:{uid}"),
+                    InlineKeyboardButton("❌ DECLINE", callback_data=f"reject:{uid}"),
+                ]
+            ])
+            screenshot_url = d.get("screenshotUrl")
+            if screenshot_url:
+                await update.message.reply_photo(photo=screenshot_url, caption=text, parse_mode=ParseMode.MARKDOWN, reply_markup=keyboard)
+            else:
+                await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=keyboard)
 
-    if count == 0:
-        await update.message.reply_text("✅ No pending payments in queue.")
+        if count == 0:
+            msg = "✅ No pending payments in queue."
+            if update.callback_query:
+                await update.callback_query.message.reply_text(msg)
+            else:
+                await update.message.reply_text(msg)
+    except Exception as e:
+        logger.error(f"Error in pending_command: {e}")
+        err_msg = f"❌ Error loading pending payments: {e}"
+        if update.callback_query:
+            await update.callback_query.message.reply_text(err_msg)
+        else:
+            await update.message.reply_text(err_msg)
 
 
 async def blacklist_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -258,147 +341,114 @@ async def blacklist_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await update.message.reply_text("Usage: `/blacklist <uid>`", parse_mode=ParseMode.MARKDOWN)
         return
     uid = context.args[0]
-    db.collection("blacklists").document(uid).set({"blacklisted": True, "timestamp": firestore.SERVER_TIMESTAMP})
-    await update.message.reply_text(f"🚫 *UID Blacklisted:* `{uid}`", parse_mode=ParseMode.MARKDOWN)
+    db.collection("users").document(uid).set({"verified": False, "status": "blacklisted"}, merge=True)
+    await update.message.reply_text(f"🚫 *Device Blacklisted:* `{uid}`", parse_mode=ParseMode.MARKDOWN)
 
 
-async def removeblacklist_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_admin(update.effective_user.id):
-        return
-    if not context.args:
-        await update.message.reply_text("Usage: `/removeblacklist <uid>`", parse_mode=ParseMode.MARKDOWN)
-        return
-    uid = context.args[0]
-    db.collection("blacklists").document(uid).delete()
-    await update.message.reply_text(f"✅ *UID Unblacklisted:* `{uid}`", parse_mode=ParseMode.MARKDOWN)
-
-
-async def antihack_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_admin(update.effective_user.id):
-        return
-    if not context.args:
-        await update.message.reply_text("Usage: `/antihack on|off`", parse_mode=ParseMode.MARKDOWN)
-        return
-    state = context.args[0].lower() == "on"
-    db.collection("settings").document("config").set({"antihackProtection": state}, merge=True)
-    await update.message.reply_text(f"🛡️ Anti-Hack Protection is now *{'ENABLED' if state else 'DISABLED'}*", parse_mode=ParseMode.MARKDOWN)
-
-
-async def maintenance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_admin(update.effective_user.id):
-        return
-    if not context.args:
-        await update.message.reply_text("Usage: `/maintenance on|off`", parse_mode=ParseMode.MARKDOWN)
-        return
-    state = context.args[0].lower() == "on"
-    db.collection("settings").document("config").set({"maintenanceMode": state}, merge=True)
-    await update.message.reply_text(f"⚠️ Maintenance Mode is now *{'ACTIVE' if state else 'OFF'}*", parse_mode=ParseMode.MARKDOWN)
-
-
-async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_admin(update.effective_user.id):
-        return
-    users = len(list(db.collection("users").stream()))
-    payments = len(list(db.collection("payments").stream()))
-    pending = len(list(db.collection("payments").where("status", "==", "pending").stream()))
-    approved = len(list(db.collection("payments").where("status", "==", "approved").stream()))
-
-    text = (
-        "📊 *KRISHNA CONFIG — SYSTEM STATS*\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"👥 Total Users: `{users}`\n"
-        f"💳 Total Submissions: `{payments}`\n"
-        f"✅ Approved: `{approved}`\n"
-        f"⏳ Pending: `{pending}`\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    )
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
-
-
-async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_admin(update.effective_user.id):
-        return
-    if not context.args:
-        await update.message.reply_text("Usage: `/broadcast System maintenance in 10 minutes!`")
-        return
-    msg = " ".join(context.args)
-    try:
-        message = messaging.Message(
-            notification=messaging.Notification(
-                title="⚡ KRISHNA CONFIG ALERT",
-                body=msg,
-            ),
-            topic="all_users",
-        )
-        messaging.send(message)
-        await update.message.reply_text(f"📢 *Push broadcast dispatched:* {msg}")
-    except Exception as e:
-        await update.message.reply_text(f"Broadcast notice: {e}")
-
-
-# Callback Query Handler for Inline Buttons (APPROVE / REJECT)
+# Callback Query Handler for Inline Buttons (APPROVE / DECLINE)
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    await query.answer()
+    # Crucial: always answer callback query immediately so Telegram client stops spinning
+    try:
+        await query.answer()
+    except Exception as e:
+        logger.warning(f"Failed to answer callback query: {e}")
 
     data = query.data
-    if data.startswith("approve:"):
-        uid = data.split(":")[1]
-        db.collection("users").document(uid).set({"verified": True, "status": "approved"}, merge=True)
-        db.collection("payments").document(uid).set({"status": "approved"}, merge=True)
-        await query.edit_message_caption(
-            caption=(query.message.caption or "") + "\n\n✅ *STATUS: APPROVED BY ADMIN*",
-            parse_mode=ParseMode.MARKDOWN
-        ) if query.message.caption else await query.edit_message_text(
-            text=(query.message.text or "") + "\n\n✅ *STATUS: APPROVED BY ADMIN*",
-            parse_mode=ParseMode.MARKDOWN
-        )
-    elif data.startswith("reject:"):
-        uid = data.split(":")[1]
-        db.collection("users").document(uid).set({"verified": False, "status": "rejected"}, merge=True)
-        db.collection("payments").document(uid).set({"status": "rejected"}, merge=True)
-        await query.edit_message_caption(
-            caption=(query.message.caption or "") + "\n\n❌ *STATUS: REJECTED BY ADMIN*",
-            parse_mode=ParseMode.MARKDOWN
-        ) if query.message.caption else await query.edit_message_text(
-            text=(query.message.text or "") + "\n\n❌ *STATUS: REJECTED BY ADMIN*",
-            parse_mode=ParseMode.MARKDOWN
-        )
-    elif data == "cmd_stats":
-        await stats_command(update, context)
-    elif data == "cmd_pending":
-        await pending_command(update, context)
-    elif data == "cmd_listusers":
-        await listusers_command(update, context)
+    logger.info(f"Callback received: {data}")
+
+    try:
+        if data.startswith("approve:"):
+            uid = data.split(":")[1]
+            # Update Firestore records
+            db.collection("users").document(uid).set({"verified": True, "status": "approved"}, merge=True)
+            db.collection("payments").document(uid).set({"status": "approved"}, merge=True)
+
+            status_suffix = "\n\n✅ *STATUS: APPROVED BY ADMIN (SAFE ZONE UNLOCKED)*"
+            try:
+                if query.message.caption:
+                    await query.edit_message_caption(
+                        caption=(query.message.caption or "") + status_suffix,
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                elif query.message.text:
+                    await query.edit_message_text(
+                        text=(query.message.text or "") + status_suffix,
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+            except Exception as edit_err:
+                logger.warning(f"Could not edit message text/caption: {edit_err}")
+                # Fallback: send confirmation text reply
+                await query.message.reply_text(
+                    f"✅ *SUCCESS: USER APPROVED!*\n🆔 UID: `{uid}`\nSafe Zone has unlocked automatically in real-time.",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+
+        elif data.startswith("reject:"):
+            uid = data.split(":")[1]
+            # Update Firestore records
+            db.collection("users").document(uid).set({"verified": False, "status": "rejected"}, merge=True)
+            db.collection("payments").document(uid).set({"status": "rejected"}, merge=True)
+
+            status_suffix = "\n\n❌ *STATUS: DECLINED BY ADMIN (ACCESS BLOCKED)*"
+            try:
+                if query.message.caption:
+                    await query.edit_message_caption(
+                        caption=(query.message.caption or "") + status_suffix,
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                elif query.message.text:
+                    await query.edit_message_text(
+                        text=(query.message.text or "") + status_suffix,
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+            except Exception as edit_err:
+                logger.warning(f"Could not edit message text/caption: {edit_err}")
+                # Fallback: send confirmation text reply
+                await query.message.reply_text(
+                    f"❌ *USER DECLINED BY ADMIN!*\n🆔 UID: `{uid}`\nAccess locked on client device.",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+
+        elif data == "cmd_stats":
+            await stats_command(update, context)
+        elif data == "cmd_pending":
+            await pending_command(update, context)
+        elif data == "cmd_listusers":
+            await listusers_command(update, context)
+
+    except Exception as e:
+        logger.error(f"Error handling callback {data}: {e}")
+        try:
+            await query.message.reply_text(f"⚠️ Action failed: {e}")
+        except Exception:
+            pass
 
 
 def main():
-    if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE":
-        print("Set TELEGRAM_BOT_TOKEN environment variable first!")
+    if not BOT_TOKEN:
+        print("Error: TELEGRAM_BOT_TOKEN environment variable is not set.", file=sys.stderr)
         sys.exit(1)
 
+    print(f"Starting Krishna Config Admin Bot... Admin Chat ID: {ADMIN_CHAT_ID}")
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("setqr", setqr_command))
+    app.add_handler(CommandHandler("stats", stats_command))
+    app.add_handler(CommandHandler("pending", pending_command))
+    app.add_handler(CommandHandler("approve", approve_command))
+    app.add_handler(CommandHandler("decline", reject_command))
+    app.add_handler(CommandHandler("reject", reject_command))
+    app.add_handler(CommandHandler("listusers", listusers_command))
     app.add_handler(CommandHandler("setupi", setupi_command))
     app.add_handler(CommandHandler("setamount", setamount_command))
+    app.add_handler(CommandHandler("setqr", setqr_command))
     app.add_handler(CommandHandler("setvideo", setvideo_command))
-    app.add_handler(CommandHandler("setcontact", setcontact_command))
-    app.add_handler(CommandHandler("adduser", adduser_command))
-    app.add_handler(CommandHandler("deluser", deluser_command))
-    app.add_handler(CommandHandler("listusers", listusers_command))
-    app.add_handler(CommandHandler("pending", pending_command))
-    app.add_handler(CommandHandler("blacklist", blacklist_command))
-    app.add_handler(CommandHandler("removeblacklist", removeblacklist_command))
-    app.add_handler(CommandHandler("antihack", antihack_command))
-    app.add_handler(CommandHandler("maintenance", maintenance_command))
-    app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
-
+    app.add_handler(CommandHandler("deluser", deluser_command))
+    app.add_handler(CommandHandler("blacklist", blacklist_command))
     app.add_handler(CallbackQueryHandler(button_callback))
 
-    print("🤖 Krishna Config Telegram Admin Bot is running...")
     app.run_polling()
 
 

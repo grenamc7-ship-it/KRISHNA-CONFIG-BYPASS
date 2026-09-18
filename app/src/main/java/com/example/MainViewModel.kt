@@ -33,9 +33,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
   init {
     viewModelScope.launch {
       userSession.collect { session ->
+        // When Admin approves from Telegram Bot, auto-navigate to SAFE ZONE immediately!
         if (session.verificationStatus == VerificationStatus.APPROVED) {
-          if (_currentScreen.value == AppScreen.PAYMENT) {
+          if (_currentScreen.value == AppScreen.PAYMENT || _currentScreen.value == AppScreen.DEVICE) {
             _currentScreen.value = AppScreen.SAFE_ZONE
+            _statusMessage.value = "Access Approved by Admin! Welcome to Safe Zone."
+          }
+        } else if (session.verificationStatus == VerificationStatus.REJECTED) {
+          if (_currentScreen.value == AppScreen.SAFE_ZONE) {
+            _currentScreen.value = AppScreen.PAYMENT
+            _statusMessage.value = "Access has been Declined by Admin."
           }
         }
       }
@@ -75,7 +82,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
       onError = { err ->
         _isLoading.value = false
         showMessage("Login notice: $err")
-        // Still allow entering for offline/demo if desired
         _currentScreen.value = AppScreen.DEVICE
       }
     )
@@ -133,16 +139,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isLoading.value = false
         showMessage(msg)
       }
-    }
-  }
-
-  fun simulateAdminDecision(approved: Boolean) {
-    repository.simulateAdminDecision(approved)
-    if (approved) {
-      _currentScreen.value = AppScreen.SAFE_ZONE
-      showMessage("Admin approved! Welcome to Safe Zone.")
-    } else {
-      showMessage("Admin rejected payment proof. Please retry.")
     }
   }
 

@@ -1,10 +1,11 @@
 package com.example.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.Base64
+import android.os.Build
 import android.util.Log
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
@@ -31,12 +32,15 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.security.MessageDigest
 import java.util.UUID
 
 class FirebaseRepository(private val context: Context) {
 
   private val tag = "KrishnaRepository"
   private val okHttpClient = OkHttpClient()
+  private val prefs: SharedPreferences =
+    context.getSharedPreferences("krishna_config_prefs", Context.MODE_PRIVATE)
 
   private val _config = MutableStateFlow(RemoteAppConfig())
   val config: StateFlow<RemoteAppConfig> = _config.asStateFlow()
@@ -53,6 +57,19 @@ class FirebaseRepository(private val context: Context) {
   private var remoteConfig: FirebaseRemoteConfig? = null
 
   init {
+    // Collect device hardware telemetry
+    val androidVersion = "Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})"
+    val deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}"
+    val osVersion = "${Build.DISPLAY} (${Build.ID})"
+    val storedKey = getOrCreateActivationKey()
+
+    _userSession.value = _userSession.value.copy(
+      androidVersion = androidVersion,
+      deviceModel = deviceModel,
+      osVersion = osVersion,
+      activationKey = storedKey
+    )
+
     try {
       if (FirebaseApp.getApps(context).isEmpty()) {
         try {
@@ -76,9 +93,23 @@ class FirebaseRepository(private val context: Context) {
       setupRemoteConfig()
       listenToFirestoreConfig()
     } catch (e: Exception) {
-      Log.w(tag, "Firebase initialization fallback active: ${e.message}")
+      Log.w(tag, "Firebase initialization fallback: ${e.message}")
       isFirebaseAvailable = false
     }
+  }
+
+  // Generates or retrieves a unique cryptographically stable activation key for this rig
+  private fun getOrCreateActivationKey(): String {
+    val existing = prefs.getString("unique_activation_key", null)
+    if (!existing.isNullOrBlank()) return existing
+
+    val rawSeed = "${Build.FINGERPRINT}_${Build.SERIAL}_${Build.BOARD}_${UUID.randomUUID()}"
+    val digest = MessageDigest.getInstance("SHA-256").digest(rawSeed.toByteArray())
+    val hex = digest.joinToString("") { "%02X".format(it) }
+    // Clean, readable formatted activation key e.g. KC-A9F3-8821-B0C4-77E1
+    val key = "KC-${hex.substring(0, 4)}-${hex.substring(4, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}"
+    prefs.edit().putString("unique_activation_key", key).apply()
+    return key
   }
 
   private fun setupRemoteConfig() {
@@ -173,15 +204,14 @@ class FirebaseRepository(private val context: Context) {
             userId = uid,
             email = email
           )
+          syncDeviceSpecsToFirestore(uid, email)
           startUserStatusListener(uid)
           onSuccess()
         }
         ?.addOnFailureListener { err ->
-          // Fallback to demo mode if auth fails due to test credentials
           onError(err.localizedMessage ?: "Sign in failed")
         }
     } else {
-      // Local fallback for offline/emulator
       val mockUid = "DEMO_" + Math.abs(email.hashCode())
       _userSession.value = _userSession.value.copy(
         userId = mockUid,
@@ -205,17 +235,21 @@ class FirebaseRepository(private val context: Context) {
             userId = uid,
             email = email
           )
-          // Register in firestore
+          val s = _userSession.value
           val data = mapOf(
             "userId" to uid,
             "email" to email,
+            "androidVersion" to s.androidVersion,
+            "deviceModel" to s.deviceModel,
+            "osVersion" to s.osVersion,
+            "activationKey" to s.activationKey,
             "verified" to false,
             "status" to "none",
             "createdAt" to System.currentTimeMillis()
           )
           firestore?.collection("users")?.document(uid)?.set(data, SetOptions.merge())
           startUserStatusListener(uid)
-          sendTextMessageToTelegram("🚨 *NEW USER SIGN UP*\n━━━━━━━━━━━━━━━━━━━━━━\n👤 Email: `${email}`\n🆔 UID: `${uid}`")
+          sendRegistrationToTelegram(uid, email)
           onSuccess()
         }
         ?.addOnFailureListener { err ->
@@ -248,15 +282,40 @@ class FirebaseRepository(private val context: Context) {
   fun setDeviceName(deviceName: String) {
     _userSession.value = _userSession.value.copy(deviceName = deviceName)
     val uid = _userSession.value.userId
+    val s = _userSession.value
     if (isFirebaseAvailable && uid.isNotBlank()) {
       firestore?.collection("users")?.document(uid)?.set(
-        mapOf("deviceName" to deviceName),
+        mapOf(
+          "deviceName" to deviceName,
+          "androidVersion" to s.androidVersion,
+          "deviceModel" to s.deviceModel,
+          "osVersion" to s.osVersion,
+          "activationKey" to s.activationKey
+        ),
         SetOptions.merge()
       )
     }
-    sendTextMessageToTelegram("📱 *DEVICE BOUND*\n━━━━━━━━━━━━━━━━━━━━━━\n👤 User: `${_userSession.value.email.ifBlank { "Mobile Client" }}`\n📱 Rig: `${deviceName}`\n🆔 UID: `${uid}`")
+    sendDeviceBoundToTelegram(uid, s.email, deviceName)
   }
 
+  private fun syncDeviceSpecsToFirestore(uid: String, email: String) {
+    val s = _userSession.value
+    if (isFirebaseAvailable && uid.isNotBlank()) {
+      firestore?.collection("users")?.document(uid)?.set(
+        mapOf(
+          "userId" to uid,
+          "email" to email,
+          "androidVersion" to s.androidVersion,
+          "deviceModel" to s.deviceModel,
+          "osVersion" to s.osVersion,
+          "activationKey" to s.activationKey
+        ),
+        SetOptions.merge()
+      )
+    }
+  }
+
+  // Real-time Firestore snapshot listener: reacts INSTANTLY to Telegram Bot Approve/Reject
   fun startUserStatusListener(userId: String) {
     firestoreListener?.remove()
     if (!isFirebaseAvailable || firestore == null || userId.isBlank()) return
@@ -321,16 +380,20 @@ class FirebaseRepository(private val context: Context) {
           }
         }
       } catch (e: Exception) {
-        Log.w(tag, "Screenshot processing notice: ${e.message}")
+        Log.w(tag, "Screenshot processing: ${e.message}")
       }
     }
 
-    // Update Firestore record
+    // Update Firestore records
     if (isFirebaseAvailable && session.userId.isNotBlank()) {
       val paymentDoc = mapOf(
         "userId" to session.userId,
         "email" to session.email,
         "deviceName" to session.deviceName,
+        "androidVersion" to session.androidVersion,
+        "deviceModel" to session.deviceModel,
+        "osVersion" to session.osVersion,
+        "activationKey" to session.activationKey,
         "upiRef" to upiRef,
         "screenshotUrl" to storageUrl,
         "amount" to cfg.paymentAmount,
@@ -343,38 +406,80 @@ class FirebaseRepository(private val context: Context) {
           "status" to "pending",
           "verified" to false,
           "upiRef" to upiRef,
-          "screenshotUrl" to storageUrl
+          "screenshotUrl" to storageUrl,
+          "activationKey" to session.activationKey,
+          "androidVersion" to session.androidVersion,
+          "deviceModel" to session.deviceModel,
+          "osVersion" to session.osVersion
         ),
         SetOptions.merge()
       )
     }
 
-    // Send notification to Telegram Bot
+    // Send payment request with complete hardware specs and unique activation key to Telegram Bot
     val token = cfg.telegramBotToken.ifBlank { "8831349456:AAGCVE9DfapAGcojAIv54C84cNY7A7uufF4" }
     val chatId = cfg.telegramAdminChatId.ifBlank { "8491850372" }
     if (token.isNotBlank() && chatId.isNotBlank()) {
+      val caption = """
+        ⚡ *NEW KRISHNA CONFIG ACTIVATION REQUEST* ⚡
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        👤 *User Email:* `${session.email}`
+        🆔 *User ID:* `${session.userId}`
+        📱 *Device Name:* `${session.deviceName.ifBlank { session.deviceModel }}`
+        🤖 *Android Version:* `${session.androidVersion}`
+        📱 *Model:* `${session.deviceModel}`
+        ⚙️ *OS Build/Version:* `${session.osVersion}`
+        💳 *UPI Reference:* `${upiRef}`
+        💰 *Amount:* ₹${cfg.paymentAmount}
+        🔑 *ACTIVATION KEY:* `${session.activationKey}`
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      """.trimIndent()
+
       sendToTelegramBot(
         token = token,
         chatId = chatId,
         imageBytes = imageBytes,
-        caption = """
-          ⚡ *NEW KRISHNA CONFIG PAYMENT* ⚡
-          ━━━━━━━━━━━━━━━━━━━━━━
-          👤 *User:* `${session.email}`
-          🆔 *UID:* `${session.userId}`
-          📱 *Device:* `${session.deviceName}`
-          💳 *UPI Ref:* `${upiRef}`
-          💰 *Amount:* ₹${cfg.paymentAmount}
-          🕒 *Time:* `${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}`
-          ━━━━━━━━━━━━━━━━━━━━━━
-        """.trimIndent(),
+        caption = caption,
         userId = session.userId
       )
     }
 
     withContext(Dispatchers.Main) {
-      onComplete(true, "Payment submitted! Awaiting admin approval.")
+      onComplete(true, "Payment and device details dispatched to Admin Bot. Waiting for approval...")
     }
+  }
+
+  private fun sendRegistrationToTelegram(uid: String, email: String) {
+    val s = _userSession.value
+    val msg = """
+      🚨 *NEW USER REGISTRATION* 🚨
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      👤 *User:* `${email}`
+      🆔 *UID:* `${uid}`
+      🤖 *Android Version:* `${s.androidVersion}`
+      📱 *Model:* `${s.deviceModel}`
+      ⚙️ *OS Version:* `${s.osVersion}`
+      🔑 *ACTIVATION KEY:* `${s.activationKey}`
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    """.trimIndent()
+    sendTextMessageToTelegram(msg)
+  }
+
+  private fun sendDeviceBoundToTelegram(uid: String, email: String, devName: String) {
+    val s = _userSession.value
+    val msg = """
+      📱 *DEVICE HARDWARE BOUND* 📱
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      👤 *User:* `${email.ifBlank { "Client" }}`
+      🆔 *UID:* `${uid}`
+      📱 *Rig Name:* `${devName}`
+      🤖 *Android Version:* `${s.androidVersion}`
+      📱 *Model:* `${s.deviceModel}`
+      ⚙️ *OS Version:* `${s.osVersion}`
+      🔑 *ACTIVATION KEY:* `${s.activationKey}`
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    """.trimIndent()
+    sendTextMessageToTelegram(msg)
   }
 
   fun sendTextMessageToTelegram(message: String) {
@@ -414,7 +519,7 @@ class FirebaseRepository(private val context: Context) {
             put("callback_data", "approve:$userId")
           })
           put(JSONObject().apply {
-            put("text", "❌ REJECT")
+            put("text", "❌ DECLINE")
             put("callback_data", "reject:$userId")
           })
         }
@@ -448,7 +553,6 @@ class FirebaseRepository(private val context: Context) {
           put("parse_mode", "Markdown")
           put("reply_markup", inlineKeyboard)
         }
-
         val request = Request.Builder()
           .url("https://api.telegram.org/bot$token/sendMessage")
           .post(jsonPayload.toString().toRequestBody("application/json".toMediaTypeOrNull()))
@@ -458,24 +562,6 @@ class FirebaseRepository(private val context: Context) {
       }
     } catch (e: Exception) {
       Log.e(tag, "Failed to send Telegram proof: ${e.message}")
-    }
-  }
-
-  // Helper for direct test simulation (allowing admin approval demonstration)
-  fun simulateAdminDecision(approved: Boolean) {
-    val newStatus = if (approved) VerificationStatus.APPROVED else VerificationStatus.REJECTED
-    _userSession.value = _userSession.value.copy(
-      verificationStatus = newStatus
-    )
-    val uid = _userSession.value.userId
-    if (isFirebaseAvailable && uid.isNotBlank()) {
-      firestore?.collection("users")?.document(uid)?.set(
-        mapOf(
-          "status" to if (approved) "approved" else "rejected",
-          "verified" to approved
-        ),
-        SetOptions.merge()
-      )
     }
   }
 

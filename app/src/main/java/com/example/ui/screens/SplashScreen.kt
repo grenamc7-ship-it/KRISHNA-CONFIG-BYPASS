@@ -157,47 +157,15 @@ fun SplashScreen(
 
       Spacer(modifier = Modifier.height(28.dp))
 
-      // 3D Title with Blood-Red and Neon-Green Gradients
-      Text(
-        text = "KRISHNA CONFIG",
-        fontSize = 32.sp,
-        fontWeight = FontWeight.Black,
-        fontFamily = FontFamily.Monospace,
-        letterSpacing = 4.sp,
-        textAlign = TextAlign.Center,
-        color = TextWhite,
-        modifier = Modifier.shadow(
-          elevation = 16.dp,
-          spotColor = BloodRedPrimary
-        )
+      // 3D Title with Visceral Bloody Style, Dripping Crimson and Neon-Green Highlights
+      com.example.ui.components.BloodyTitle(
+        titleSize = 34.sp,
+        subtitle = "V3.0 ULTIMATE SAFE SYSTEM",
+        showDrips = true,
+        dropHeight = 18.dp
       )
 
-      Spacer(modifier = Modifier.height(6.dp))
-
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        Box(
-          modifier = Modifier
-            .size(8.dp)
-            .background(NeonGreen, CircleShape)
-        )
-        Text(
-          text = "V3.0 ULTIMATE SAFE SYSTEM",
-          fontSize = 12.sp,
-          fontWeight = FontWeight.Bold,
-          color = NeonGreenBright,
-          letterSpacing = 2.sp
-        )
-        Box(
-          modifier = Modifier
-            .size(8.dp)
-            .background(NeonGreen, CircleShape)
-        )
-      }
-
-      Spacer(modifier = Modifier.height(36.dp))
+      Spacer(modifier = Modifier.height(30.dp))
 
       // Loading step indicator
       val statusText = when (introStep) {

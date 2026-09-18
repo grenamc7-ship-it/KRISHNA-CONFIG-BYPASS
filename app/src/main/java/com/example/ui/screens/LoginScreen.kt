@@ -80,24 +80,13 @@ fun LoginScreen(
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.Center
   ) {
-    // Header
-    Text(
-      text = "KRISHNA CONFIG",
-      fontSize = 28.sp,
-      fontWeight = FontWeight.ExtraBold,
-      fontFamily = FontFamily.Monospace,
-      color = BloodRedPrimary,
-      letterSpacing = 3.sp,
-      textAlign = TextAlign.Center
-    )
-
-    Text(
-      text = if (isRegisterMode) "CREATE NEW ACCOUNT" else "SECURITY AUTHORIZATION",
-      fontSize = 12.sp,
-      fontWeight = FontWeight.SemiBold,
-      color = NeonGreenBright,
-      letterSpacing = 2.sp,
-      modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+    // Header - Visceral Bloody Style with Drips
+    com.example.ui.components.BloodyTitle(
+      titleSize = 30.sp,
+      subtitle = if (isRegisterMode) "CREATE NEW ACCOUNT" else "SECURITY AUTHORIZATION",
+      showDrips = true,
+      dropHeight = 16.dp,
+      modifier = Modifier.padding(bottom = 20.dp)
     )
 
     CyberGlassCard(

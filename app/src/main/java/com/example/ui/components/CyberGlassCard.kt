@@ -44,7 +44,7 @@ fun CyberGlassCard(
   val infiniteTransition = rememberInfiniteTransition(label = "border_pulse")
   val glowAlpha by infiniteTransition.animateFloat(
     initialValue = 0.5f,
-    targetValue = if (pulsateGlow) 1.0f else 0.7f,
+    targetValue = if (pulsateGlow) 1.0f else 0.75f,
     animationSpec = infiniteRepeatable(
       animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
       repeatMode = RepeatMode.Reverse
@@ -62,68 +62,72 @@ fun CyberGlassCard(
       brush = Brush.linearGradient(
         colors = listOf(
           accentColor.copy(alpha = glowAlpha),
-          secondaryColor.copy(alpha = 0.25f),
-          accentColor.copy(alpha = glowAlpha * 0.8f)
+          secondaryColor.copy(alpha = 0.35f),
+          accentColor.copy(alpha = glowAlpha * 0.9f)
         )
       )
     ),
     modifier = modifier
       .shadow(
-        elevation = 12.dp,
+        elevation = 14.dp,
         shape = RoundedCornerShape(cornerRadius),
-        ambientColor = accentColor.copy(alpha = 0.4f),
-        spotColor = accentColor.copy(alpha = 0.6f)
+        ambientColor = accentColor.copy(alpha = 0.35f),
+        spotColor = accentColor.copy(alpha = 0.55f)
       )
   ) {
     Box(
       modifier = Modifier
         .fillMaxWidth()
+        // Translucent frosted specular glass gradient with cyber highlights
         .background(
           Brush.verticalGradient(
             colors = listOf(
-              Color(0x332A040D),
+              Color(0x38FFFFFF), // Top specular frost reflection
+              Color(0x1A2A040D),
               Color(0x22050B05),
-              Color(0x44140207)
+              Color(0x2E140207)
             )
           )
         )
         .drawBehind {
-          // Cyber bracket ticks on corners
-          val stroke = 3.dp.toPx()
-          val tickLen = 16.dp.toPx()
+          // Cyber bracket corner ticks
+          val stroke = 2.5.dp.toPx()
+          val tickLen = 14.dp.toPx()
           // Top-left cyber tick
           drawLine(
-            color = accentColor,
+            color = accentColor.copy(alpha = glowAlpha),
             start = Offset(0f, tickLen),
             end = Offset(0f, 0f),
             strokeWidth = stroke
           )
           drawLine(
-            color = accentColor,
+            color = accentColor.copy(alpha = glowAlpha),
             start = Offset(0f, 0f),
             end = Offset(tickLen, 0f),
             strokeWidth = stroke
           )
 
           // Bottom-right cyber tick
-          val w = size.width
-          val h = size.height
           drawLine(
-            color = secondaryColor,
-            start = Offset(w - tickLen, h),
-            end = Offset(w, h),
+            color = accentColor.copy(alpha = glowAlpha),
+            start = Offset(size.width, size.height - tickLen),
+            end = Offset(size.width, size.height),
             strokeWidth = stroke
           )
           drawLine(
-            color = secondaryColor,
-            start = Offset(w, h - tickLen),
-            end = Offset(w, h),
+            color = accentColor.copy(alpha = glowAlpha),
+            start = Offset(size.width - tickLen, size.height),
+            end = Offset(size.width, size.height),
             strokeWidth = stroke
           )
         }
-        .padding(20.dp)
     ) {
-      Column(content = content)
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(18.dp),
+        content = content
+      )
     }
   }
 }

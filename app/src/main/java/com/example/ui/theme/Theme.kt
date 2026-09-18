@@ -25,7 +25,7 @@ private val CyberColorScheme = darkColorScheme(
 )
 
 @Composable
-fun MyApplicationTheme(
+fun KrishnaConfigTheme(
   content: @Composable () -> Unit,
 ) {
   MaterialTheme(
@@ -35,3 +35,7 @@ fun MyApplicationTheme(
   )
 }
 
+@Composable
+fun MyApplicationTheme(
+  content: @Composable () -> Unit,
+) = KrishnaConfigTheme(content = content)

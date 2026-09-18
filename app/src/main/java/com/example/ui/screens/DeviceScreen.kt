@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -37,9 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.UserSession
 import com.example.ui.components.CyberGlassCard
 import com.example.ui.components.GlowingButton
-import com.example.ui.theme.BloodRedGlow
 import com.example.ui.theme.BloodRedPrimary
 import com.example.ui.theme.CyberDarkBg
 import com.example.ui.theme.NeonGreen
@@ -49,12 +50,12 @@ import com.example.ui.theme.TextWhite
 
 @Composable
 fun DeviceScreen(
-  initialDeviceName: String,
+  userSession: UserSession,
   onProceed: (String) -> Unit,
   modifier: Modifier = Modifier
 ) {
   val defaultDevice = remember {
-    if (initialDeviceName.isNotBlank()) initialDeviceName
+    if (userSession.deviceName.isNotBlank()) userSession.deviceName
     else "${Build.MANUFACTURER.uppercase()} ${Build.MODEL}"
   }
   var deviceName by remember { mutableStateOf(defaultDevice) }
@@ -68,23 +69,12 @@ fun DeviceScreen(
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.Center
   ) {
-    Text(
-      text = "HARDWARE BINDING",
-      fontSize = 26.sp,
-      fontWeight = FontWeight.ExtraBold,
-      fontFamily = FontFamily.Monospace,
-      color = BloodRedPrimary,
-      letterSpacing = 2.sp,
-      textAlign = TextAlign.Center
-    )
-
-    Text(
-      text = "SECURE DEVICE REGISTRATION",
-      fontSize = 12.sp,
-      fontWeight = FontWeight.SemiBold,
-      color = NeonGreenBright,
-      letterSpacing = 2.sp,
-      modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+    com.example.ui.components.BloodyTitle(
+      titleSize = 28.sp,
+      subtitle = "HARDWARE BINDING & RIG REGISTRATION",
+      showDrips = true,
+      dropHeight = 14.dp,
+      modifier = Modifier.padding(bottom = 20.dp)
     )
 
     CyberGlassCard(
@@ -100,7 +90,7 @@ fun DeviceScreen(
         Box(
           modifier = Modifier
             .size(44.dp)
-            .background(CyberDarkBg, CircleShape)
+            .background(CyberDarkBg.copy(alpha = 0.5f), CircleShape)
             .border(1.5.dp, NeonGreen, CircleShape),
           contentAlignment = Alignment.Center
         ) {
@@ -146,8 +136,8 @@ fun DeviceScreen(
           unfocusedTextColor = TextWhite,
           focusedBorderColor = NeonGreen,
           unfocusedBorderColor = TextMuted.copy(alpha = 0.4f),
-          focusedContainerColor = CyberDarkBg.copy(alpha = 0.4f),
-          unfocusedContainerColor = CyberDarkBg.copy(alpha = 0.3f)
+          focusedContainerColor = CyberDarkBg.copy(alpha = 0.35f),
+          unfocusedContainerColor = CyberDarkBg.copy(alpha = 0.25f)
         ),
         shape = RoundedCornerShape(10.dp),
         modifier = Modifier
@@ -157,31 +147,45 @@ fun DeviceScreen(
 
       Spacer(modifier = Modifier.height(18.dp))
 
-      // Device detected telemetry
+      // Complete device hardware telemetry that will be dispatched to Telegram Bot
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .background(CyberDarkBg.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
-          .border(1.dp, BloodRedPrimary.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+          .background(CyberDarkBg.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
+          .border(1.dp, BloodRedPrimary.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
           .padding(12.dp)
       ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
           Text(
-            text = "• ARCHITECTURE: ${Build.SUPPORTED_ABIS.firstOrNull() ?: "arm64-v8a"}",
+            text = "TELEMETRY AUDIT FOR BOT:",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace,
+            color = NeonGreenBright
+          )
+          Text(
+            text = "• ANDROID VERSION: ${userSession.androidVersion.ifBlank { "Android " + Build.VERSION.RELEASE }}",
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace,
+            color = TextWhite
+          )
+          Text(
+            text = "• MODEL: ${userSession.deviceModel.ifBlank { Build.MANUFACTURER + " " + Build.MODEL }}",
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace,
+            color = TextWhite
+          )
+          Text(
+            text = "• OS / BUILD: ${userSession.osVersion.ifBlank { Build.DISPLAY }}",
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             color = TextMuted
           )
           Text(
-            text = "• OS VERSION: Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
+            text = "• UNIQUE ACTIVATION KEY:\n  ${userSession.activationKey}",
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
-            color = TextMuted
-          )
-          Text(
-            text = "• KERNEL SECURITY: READY FOR SHIELDING",
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
             color = NeonGreen
           )
         }
