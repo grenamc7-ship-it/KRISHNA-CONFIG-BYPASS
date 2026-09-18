@@ -1,5 +1,8 @@
 package com.example.ui.components
 
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -22,18 +25,61 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.RenderersFactory
+import androidx.media3.exoplayer.audio.AudioRendererEventListener
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
+import androidx.media3.exoplayer.metadata.MetadataOutput
+import androidx.media3.exoplayer.text.TextOutput
+import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
+import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.example.ui.theme.BloodRedBackground
 import com.example.ui.theme.CyberDarkBg
 
 private const val TAG = "CyberBackgroundVideo"
+
+/**
+ * A custom RenderersFactory that only instantiates the Video Renderer and omits Audio Renderer.
+ * Since this is a silent ambient looping background video:
+ * 1. It completely eliminates MediaCodecAudioRenderer / AudioSink$UnexpectedDiscontinuityException errors.
+ * 2. It frees system MediaCodec resources so the Android OS Resource Manager doesn't release codecs.
+ */
+@OptIn(UnstableApi::class)
+private class VideoOnlyRenderersFactory(
+  private val context: Context
+) : RenderersFactory {
+  override fun createRenderers(
+    eventHandler: Handler,
+    videoRendererEventListener: VideoRendererEventListener,
+    audioRendererEventListener: AudioRendererEventListener,
+    textRendererOutput: TextOutput,
+    metadataRendererOutput: MetadataOutput
+  ): Array<Renderer> {
+    val videoRenderer = MediaCodecVideoRenderer(
+      context,
+      MediaCodecSelector.DEFAULT,
+      5000L,
+      eventHandler,
+      videoRendererEventListener,
+      50
+    )
+    // No audio renderer is added - completely silent background video, saving audio sink and decoder resources!
+    return arrayOf(videoRenderer)
+  }
+}
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -45,27 +91,31 @@ fun CyberBackgroundVideo(
   val lifecycleOwner = LocalLifecycleOwner.current
   var hasCodecError by remember { mutableStateOf(false) }
 
-  // Gracefully initialize ExoPlayer with fallback decoder capabilities and error listener
+  // Gracefully initialize ExoPlayer with VideoOnlyRenderersFactory to completely avoid AudioSink errors
   val exoPlayer = remember {
     try {
-      val renderersFactory = DefaultRenderersFactory(context.applicationContext)
-        .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
-        .setEnableDecoderFallback(true)
+      val renderersFactory = VideoOnlyRenderersFactory(context.applicationContext)
 
       ExoPlayer.Builder(context.applicationContext, renderersFactory).build().apply {
         repeatMode = Player.REPEAT_MODE_ALL
-        volume = 0f // muted background video
+        volume = 0f // muted ambient background
         playWhenReady = true
+
+        // Disable audio track selection entirely
+        trackSelectionParameters = trackSelectionParameters
+          .buildUpon()
+          .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+          .build()
 
         addListener(object : Player.Listener {
           override fun onPlayerError(error: PlaybackException) {
-            Log.w(TAG, "ExoPlayer playback error: ${error.errorCodeName} (${error.errorCode}): ${error.message}")
+            Log.w(TAG, "ExoPlayer playback warning: ${error.errorCodeName} (${error.errorCode}): ${error.message}")
             if (error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
               error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
               error.errorCode == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED ||
               error.errorCodeName.contains("DECODER", ignoreCase = true)
             ) {
-              Log.e(TAG, "MediaCodec resource release/error detected. Falling back cleanly.")
+              Log.e(TAG, "MediaCodec resource error detected. Switching smoothly to fallback ambient canvas.")
               hasCodecError = true
             }
           }
@@ -181,8 +231,5 @@ fun CyberBackgroundVideo(
           )
         )
     )
-
-    // Blood-red & Neon-green animated drip overlay
-    BloodDripOverlay(modifier = Modifier.fillMaxSize())
   }
 }

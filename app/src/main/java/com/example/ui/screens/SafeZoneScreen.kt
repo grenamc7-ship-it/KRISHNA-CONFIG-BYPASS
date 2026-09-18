@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -24,8 +25,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,7 +56,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,7 +66,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -72,6 +81,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.RemoteAppConfig
 import com.example.data.UserSession
+import com.example.ui.components.BloodyTitle
+import com.example.ui.components.Cyber3DButton
+import com.example.ui.components.Cyber3DFeatureCard
 import com.example.ui.components.CyberGlassCard
 import com.example.ui.theme.BloodRedDark
 import com.example.ui.theme.BloodRedGlow
@@ -90,211 +102,240 @@ import kotlinx.coroutines.launch
 fun SafeZoneScreen(
   userSession: UserSession,
   config: RemoteAppConfig,
-  onUpdateUID: (String) -> Unit,
   onToggleProtection: (Boolean) -> Unit,
   onFixAntihack: () -> Unit,
   onRemoveBlacklist: () -> Unit,
-  onLogout: () -> Unit,
-  modifier: Modifier = Modifier
+  onUpdateUID: (String) -> Unit,
+  onLogout: () -> Unit
 ) {
   val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
-  val scrollState = rememberScrollState()
 
-  var uidInput by remember { mutableStateOf(userSession.uidConfig.ifEmpty { "5128934102" }) }
-  var isUidVerified by remember { mutableStateOf(userSession.uidConfig.isNotEmpty()) }
+  var uidInput by remember { mutableStateOf(userSession.userId) }
+  var isUidVerified by remember { mutableStateOf(userSession.userId.isNotBlank()) }
 
   var isScanningAntihack by remember { mutableStateOf(false) }
-  var antihackProgress by remember { mutableStateOf(0f) }
+  var antihackProgress by remember { mutableFloatStateOf(0f) }
 
   var isPurgingBlacklist by remember { mutableStateOf(false) }
-  var blacklistProgress by remember { mutableStateOf(0f) }
+  var blacklistProgress by remember { mutableFloatStateOf(0f) }
 
-  // Check All Files Access status
-  var hasStorageAccess by remember {
-    mutableStateOf(
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        Environment.isExternalStorageManager()
-      } else {
-        true
-      }
-    )
+  // Check Manage External Storage Permission
+  fun checkStoragePermission(): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+      Environment.isExternalStorageManager()
+    } else {
+      true
+    }
   }
 
-  val infiniteTransition = rememberInfiniteTransition(label = "safe_glow")
+  var hasStorageAccess by remember { mutableStateOf(checkStoragePermission()) }
+
+  // Continuous listener for permission return
+  LaunchedEffect(Unit) {
+    while (true) {
+      delay(1200)
+      hasStorageAccess = checkStoragePermission()
+    }
+  }
+
+  val infiniteTransition = rememberInfiniteTransition(label = "sz_pulse")
   val pulseScale by infiniteTransition.animateFloat(
-    initialValue = 0.97f,
-    targetValue = 1.03f,
+    initialValue = 0.985f,
+    targetValue = 1.015f,
     animationSpec = infiniteRepeatable(
-      animation = tween(durationMillis = 1600, easing = FastOutSlowInEasing),
+      animation = tween(1600, easing = FastOutSlowInEasing),
       repeatMode = RepeatMode.Reverse
     ),
-    label = "safe_pulse"
+    label = "sz_scale"
+  )
+
+  val neonGlowAlpha by infiniteTransition.animateFloat(
+    initialValue = 0.6f,
+    targetValue = 1.0f,
+    animationSpec = infiniteRepeatable(
+      animation = tween(1200, easing = FastOutSlowInEasing),
+      repeatMode = RepeatMode.Reverse
+    ),
+    label = "sz_glow"
   )
 
   Column(
-    modifier = modifier
+    modifier = Modifier
       .fillMaxSize()
-      .verticalScroll(scrollState)
-      .padding(horizontal = 20.dp, vertical = 28.dp),
+      .verticalScroll(rememberScrollState())
+      .padding(horizontal = 18.dp, vertical = 24.dp),
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
-    com.example.ui.components.BloodyTitle(
-      titleSize = 28.sp,
+    // 3D Bloody Cyber Title with Animated Drips
+    BloodyTitle(
+      titleSize = 30.sp,
       subtitle = "SAFE ZONE ACTIVATED • RIG SHIELDED",
       showDrips = true,
-      dropHeight = 14.dp,
+      dropHeight = 16.dp,
       modifier = Modifier.padding(bottom = 16.dp)
     )
 
-    // Top Safe Zone Banner (Frosted Cyber Glass)
+    // Ultra-3D Holographic Safe Zone Shield Banner
     Box(
       modifier = Modifier
+        .fillMaxWidth()
         .scale(pulseScale)
-        .background(
-          color = CyberDarkBg.copy(alpha = 0.55f),
-          shape = RoundedCornerShape(16.dp)
-        )
-        .border(2.dp, NeonGreen, RoundedCornerShape(16.dp))
-        .padding(horizontal = 20.dp, vertical = 14.dp),
-      contentAlignment = Alignment.Center
     ) {
-      Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          Icon(
-            imageVector = Icons.Default.Shield,
-            contentDescription = null,
-            tint = NeonGreenBright,
-            modifier = Modifier.size(24.dp)
+      // 3D Shadow Base
+      Box(
+        modifier = Modifier
+          .matchParentSize()
+          .offset(y = 5.dp)
+          .background(
+            brush = Brush.verticalGradient(
+              listOf(Color.Transparent, Color(0x60003311), Color(0x90001808))
+            ),
+            shape = RoundedCornerShape(20.dp)
           )
+      )
+
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .shadow(
+            elevation = 16.dp,
+            shape = RoundedCornerShape(20.dp),
+            spotColor = NeonGreenBright.copy(alpha = neonGlowAlpha * 0.8f),
+            ambientColor = NeonGreen.copy(alpha = 0.4f)
+          )
+          .background(
+            brush = Brush.verticalGradient(
+              colors = listOf(
+                Color(0x35FFFFFF),
+                Color(0x30002A0D),
+                CyberDarkBg.copy(alpha = 0.6f),
+                Color(0x50000000)
+              )
+            ),
+            shape = RoundedCornerShape(20.dp)
+          )
+          .border(
+            width = 2.dp,
+            brush = Brush.linearGradient(
+              listOf(NeonGreenBright.copy(alpha = neonGlowAlpha), NeonGreen.copy(alpha = 0.4f), Color.White.copy(alpha = 0.3f))
+            ),
+            shape = RoundedCornerShape(20.dp)
+          )
+          .drawBehind {
+            // Specular top highlight
+            drawLine(
+              color = Color.White.copy(alpha = 0.6f),
+              start = Offset(24.dp.toPx(), 1.dp.toPx()),
+              end = Offset(size.width - 24.dp.toPx(), 1.dp.toPx()),
+              strokeWidth = 2.dp.toPx()
+            )
+          }
+          .padding(horizontal = 20.dp, vertical = 16.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+          ) {
+            Box(
+              modifier = Modifier
+                .size(34.dp)
+                .background(NeonGreenDark, CircleShape)
+                .border(1.5.dp, NeonGreenBright, CircleShape),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                imageVector = Icons.Default.Shield,
+                contentDescription = null,
+                tint = NeonGreenBright,
+                modifier = Modifier.size(20.dp)
+              )
+            }
+            Text(
+              text = "SAFE ZONE ACTIVATED",
+              fontSize = 15.sp,
+              fontWeight = FontWeight.Black,
+              fontFamily = FontFamily.Monospace,
+              color = NeonGreenBright,
+              letterSpacing = 2.sp
+            )
+          }
+          Spacer(modifier = Modifier.height(6.dp))
           Text(
-            text = "SAFE ZONE ACTIVATED",
+            text = "NOW YOU ARE ENTERED YOUR SAFE ZONE",
             fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.Black,
             fontFamily = FontFamily.Monospace,
-            color = NeonGreenBright,
-            letterSpacing = 2.sp
+            color = TextWhite,
+            textAlign = TextAlign.Center
           )
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-          text = "NOW YOU ARE ENTERED YOUR SAFE ZONE",
-          fontSize = 15.sp,
-          fontWeight = FontWeight.Black,
-          fontFamily = FontFamily.Monospace,
-          color = TextWhite,
-          textAlign = TextAlign.Center
-        )
       }
     }
 
     Spacer(modifier = Modifier.height(18.dp))
 
-    // ALL FILES ACCESS PERMISSION CARD (Full glassy look)
-    CyberGlassCard(
-      modifier = Modifier.fillMaxWidth(),
-      isGreenAccent = hasStorageAccess
+    // 1. ALL FILES ACCESS PERMISSION (3D FEATURE CARD)
+    Cyber3DFeatureCard(
+      title = "• ALL FILES ACCESS PERMISSION",
+      subtitle = if (hasStorageAccess) "PERMISSION: GRANTED ✓" else "STORAGE ACCESS: REQUIRED",
+      icon = Icons.Default.FolderShared,
+      isActive = hasStorageAccess
     ) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-      ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(10.dp),
-          modifier = Modifier.weight(1f)
-        ) {
-          Box(
-            modifier = Modifier
-              .size(38.dp)
-              .background(
-                if (hasStorageAccess) NeonGreenDark else BloodRedDark,
-                CircleShape
-              ),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = Icons.Default.FolderShared,
-              contentDescription = null,
-              tint = if (hasStorageAccess) NeonGreenBright else BloodRedGlow,
-              modifier = Modifier.size(20.dp)
-            )
-          }
-          Column {
-            Text(
-              text = "• ALL FILES ACCESS PERMISSION",
-              fontSize = 13.sp,
-              fontWeight = FontWeight.Bold,
-              fontFamily = FontFamily.Monospace,
-              color = TextWhite
-            )
-            Text(
-              text = if (hasStorageAccess) "PERMISSION: GRANTED ✓" else "STORAGE ACCESS: REQUIRED",
-              fontSize = 11.sp,
-              color = if (hasStorageAccess) NeonGreenBright else BloodRedGlow
-            )
-          }
-        }
-
-        OutlinedButton(
-          onClick = {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-              try {
-                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                  data = Uri.parse("package:${context.packageName}")
-                }
-                context.startActivity(intent)
-              } catch (e: Exception) {
-                val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                context.startActivity(intent)
+      Cyber3DButton(
+        text = if (hasStorageAccess) "ACTIVE ✓" else "GRANT",
+        onClick = {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+              val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                data = Uri.parse("package:${context.packageName}")
               }
-            } else {
-              hasStorageAccess = true
-              Toast.makeText(context, "Storage Access Active", Toast.LENGTH_SHORT).show()
+              context.startActivity(intent)
+            } catch (e: Exception) {
+              val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+              context.startActivity(intent)
             }
-          },
-          colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = if (hasStorageAccess) StatusSuccess else NeonGreen
-          ),
-          border = androidx.compose.foundation.BorderStroke(
-            1.5.dp,
-            if (hasStorageAccess) StatusSuccess else NeonGreen
-          ),
-          shape = RoundedCornerShape(10.dp)
-        ) {
-          Text(
-            text = if (hasStorageAccess) "ALLOWED" else "GRANT",
-            fontWeight = FontWeight.Bold,
-            fontSize = 11.sp
-          )
-        }
-      }
+          } else {
+            hasStorageAccess = true
+            Toast.makeText(context, "Storage Access Active", Toast.LENGTH_SHORT).show()
+          }
+        },
+        isGreen = hasStorageAccess,
+        modifier = Modifier.width(115.dp),
+        height = 42.dp,
+        fontSize = 11.sp,
+        testTag = "grant_storage_btn"
+      )
     }
 
-    Spacer(modifier = Modifier.height(14.dp))
+    Spacer(modifier = Modifier.height(8.dp))
 
-    // 1. UID VERIFICATION PANEL (Glassy)
+    // 2. UID VERIFICATION (3D GLASS CARD)
     CyberGlassCard(
       modifier = Modifier.fillMaxWidth(),
-      isGreenAccent = true
+      isGreenAccent = isUidVerified
     ) {
       Text(
-        text = "• ENTER YOUR UID - XXXXXXXXXX",
+        text = "• VERIFY UID FOR SAFE ZONE",
         fontSize = 13.sp,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.Black,
         fontFamily = FontFamily.Monospace,
-        color = NeonGreenBright
+        color = TextWhite
+      )
+      Text(
+        text = if (isUidVerified) "UID LINKED & VERIFIED ✓" else "ENTER IN-GAME / DEVICE UID TO BIND",
+        fontSize = 11.sp,
+        fontFamily = FontFamily.Monospace,
+        color = if (isUidVerified) NeonGreenBright else TextMuted
       )
       Spacer(modifier = Modifier.height(10.dp))
 
       Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
       ) {
         OutlinedTextField(
           value = uidInput,
@@ -306,282 +347,171 @@ fun SafeZoneScreen(
             unfocusedTextColor = TextWhite,
             focusedBorderColor = NeonGreen,
             unfocusedBorderColor = TextMuted.copy(alpha = 0.4f),
-            focusedContainerColor = CyberDarkBg.copy(alpha = 0.35f),
-            unfocusedContainerColor = CyberDarkBg.copy(alpha = 0.25f)
+            focusedContainerColor = CyberDarkBg.copy(alpha = 0.45f),
+            unfocusedContainerColor = CyberDarkBg.copy(alpha = 0.35f)
           ),
-          shape = RoundedCornerShape(10.dp),
+          shape = RoundedCornerShape(12.dp),
           modifier = Modifier
             .weight(1f)
             .testTag("uid_input_field")
         )
 
-        // VERIFY BUTTON
-        OutlinedButton(
+        Cyber3DButton(
+          text = if (isUidVerified) "VERIFIED" else "VERIFY",
           onClick = {
             if (uidInput.isNotBlank()) {
               isUidVerified = true
               onUpdateUID(uidInput.trim())
             }
           },
-          colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = if (isUidVerified) StatusSuccess else NeonGreen
-          ),
-          border = androidx.compose.foundation.BorderStroke(
-            1.5.dp,
-            if (isUidVerified) StatusSuccess else NeonGreen
-          ),
-          shape = RoundedCornerShape(10.dp),
-          modifier = Modifier.testTag("verify_uid_btn")
-        ) {
-          if (isUidVerified) {
-            Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.size(4.dp))
-            Text("VERIFIED", fontWeight = FontWeight.Bold, fontSize = 11.sp)
-          } else {
-            Icon(Icons.Default.VerifiedUser, null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.size(4.dp))
-            Text("VERIFY", fontWeight = FontWeight.Bold, fontSize = 11.sp)
-          }
-        }
+          isGreen = isUidVerified,
+          icon = if (isUidVerified) Icons.Default.CheckCircle else Icons.Default.VerifiedUser,
+          modifier = Modifier.width(125.dp),
+          height = 48.dp,
+          fontSize = 11.sp,
+          testTag = "verify_uid_btn"
+        )
       }
     }
 
-    Spacer(modifier = Modifier.height(14.dp))
+    Spacer(modifier = Modifier.height(8.dp))
 
-    // 2. ENABLE PROTECTION (Glassy)
-    CyberGlassCard(
-      modifier = Modifier.fillMaxWidth(),
-      isGreenAccent = userSession.isProtectionEnabled
+    // 3. ENABLE PROTECTION (3D FEATURE CARD)
+    Cyber3DFeatureCard(
+      title = "• ENABLE PROTECTION",
+      subtitle = if (userSession.isProtectionEnabled) "STATUS: SHIELDED & ACTIVE" else "STATUS: STANDBY",
+      icon = if (userSession.isProtectionEnabled) Icons.Default.Shield else Icons.Default.LockOpen,
+      isActive = userSession.isProtectionEnabled
     ) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-      ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-          Box(
-            modifier = Modifier
-              .size(38.dp)
-              .background(
-                if (userSession.isProtectionEnabled) NeonGreenDark else BloodRedDark,
-                CircleShape
-              ),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = if (userSession.isProtectionEnabled) Icons.Default.Shield else Icons.Default.LockOpen,
-              contentDescription = null,
-              tint = if (userSession.isProtectionEnabled) NeonGreenBright else BloodRedGlow,
-              modifier = Modifier.size(20.dp)
-            )
-          }
-          Column {
-            Text(
-              text = "• ENABLE PROTECTION",
-              fontSize = 13.sp,
-              fontWeight = FontWeight.Bold,
-              fontFamily = FontFamily.Monospace,
-              color = TextWhite
-            )
-            Text(
-              text = if (userSession.isProtectionEnabled) "STATUS: SHIELDED & ACTIVE" else "STATUS: STANDBY",
-              fontSize = 11.sp,
-              color = if (userSession.isProtectionEnabled) NeonGreenBright else TextMuted
-            )
-          }
-        }
+      Switch(
+        checked = userSession.isProtectionEnabled,
+        onCheckedChange = { onToggleProtection(it) },
+        colors = SwitchDefaults.colors(
+          checkedThumbColor = NeonGreenBright,
+          checkedTrackColor = NeonGreenDark,
+          uncheckedThumbColor = BloodRedPrimary,
+          uncheckedTrackColor = CyberDarkBg
+        ),
+        modifier = Modifier.testTag("protection_toggle")
+      )
+    }
 
-        Switch(
-          checked = userSession.isProtectionEnabled,
-          onCheckedChange = { onToggleProtection(it) },
-          colors = SwitchDefaults.colors(
-            checkedThumbColor = NeonGreenBright,
-            checkedTrackColor = NeonGreenDark,
-            uncheckedThumbColor = BloodRedPrimary,
-            uncheckedTrackColor = CyberDarkBg
-          ),
-          modifier = Modifier.testTag("protection_toggle")
+    Spacer(modifier = Modifier.height(8.dp))
+
+    // 4. FIX SYSTEM ANTIHACK (3D FEATURE CARD)
+    Cyber3DFeatureCard(
+      title = "• FIX SYSTEM ANTIHACK",
+      subtitle = if (userSession.isAntihackFixed) "STATUS: INTEGRITY 100%" else "CORE INTEGRITY: SCAN REQUIRED",
+      icon = Icons.Default.Build,
+      isActive = userSession.isAntihackFixed
+    ) {
+      Cyber3DButton(
+        text = if (userSession.isAntihackFixed) "FIXED ✓" else "FIX NOW",
+        onClick = {
+          if (!isScanningAntihack) {
+            isScanningAntihack = true
+            antihackProgress = 0f
+            coroutineScope.launch {
+              for (i in 1..10) {
+                delay(140)
+                antihackProgress = i / 10f
+              }
+              isScanningAntihack = false
+              onFixAntihack()
+            }
+          }
+        },
+        isLoading = isScanningAntihack,
+        isGreen = userSession.isAntihackFixed,
+        modifier = Modifier.width(115.dp),
+        height = 42.dp,
+        fontSize = 11.sp,
+        testTag = "fix_antihack_btn"
+      )
+    }
+
+    AnimatedVisibility(visible = isScanningAntihack) {
+      Column(modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) {
+        LinearProgressIndicator(
+          progress = { antihackProgress },
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(5.dp)
+            .clip(RoundedCornerShape(3.dp)),
+          color = NeonGreenBright,
+          trackColor = CyberDarkBg
+        )
+      }
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    // 5. REMOVE BLACKLIST (3D FEATURE CARD)
+    Cyber3DFeatureCard(
+      title = "• REMOVE BLACKLIST",
+      subtitle = if (userSession.isBlacklistRemoved) "BLACKLIST: 0 ENTRIES" else "PURGE ALL SYSTEM LOGS",
+      icon = Icons.Default.CleaningServices,
+      isActive = userSession.isBlacklistRemoved
+    ) {
+      Cyber3DButton(
+        text = if (userSession.isBlacklistRemoved) "CLEARED ✓" else "PURGE",
+        onClick = {
+          if (!isPurgingBlacklist) {
+            isPurgingBlacklist = true
+            blacklistProgress = 0f
+            coroutineScope.launch {
+              for (i in 1..10) {
+                delay(140)
+                blacklistProgress = i / 10f
+              }
+              isPurgingBlacklist = false
+              onRemoveBlacklist()
+            }
+          }
+        },
+        isLoading = isPurgingBlacklist,
+        isGreen = userSession.isBlacklistRemoved,
+        modifier = Modifier.width(115.dp),
+        height = 42.dp,
+        fontSize = 11.sp,
+        testTag = "remove_blacklist_btn"
+      )
+    }
+
+    AnimatedVisibility(visible = isPurgingBlacklist) {
+      Column(modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) {
+        LinearProgressIndicator(
+          progress = { blacklistProgress },
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(5.dp)
+            .clip(RoundedCornerShape(3.dp)),
+          color = BloodRedPrimary,
+          trackColor = CyberDarkBg
         )
       }
     }
 
     Spacer(modifier = Modifier.height(14.dp))
 
-    // 3. FIX SYSTEM ANTIHACK (Glassy)
-    CyberGlassCard(
-      modifier = Modifier.fillMaxWidth(),
-      isGreenAccent = userSession.isAntihackFixed
-    ) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-      ) {
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            text = "• FIX SYSTEM ANTIHACK",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
-            color = TextWhite
-          )
-          Text(
-            text = if (userSession.isAntihackFixed) "STATUS: ANTIHACK INTEGRITY 100%" else "CORE INTEGRITY: SCAN REQUIRED",
-            fontSize = 11.sp,
-            color = if (userSession.isAntihackFixed) NeonGreenBright else TextMuted
-          )
-        }
-
-        OutlinedButton(
-          onClick = {
-            if (!isScanningAntihack) {
-              isScanningAntihack = true
-              antihackProgress = 0f
-              coroutineScope.launch {
-                for (i in 1..10) {
-                  delay(150)
-                  antihackProgress = i / 10f
-                }
-                isScanningAntihack = false
-                onFixAntihack()
-              }
-            }
-          },
-          colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = if (userSession.isAntihackFixed) StatusSuccess else BloodRedGlow
-          ),
-          border = androidx.compose.foundation.BorderStroke(
-            1.5.dp,
-            if (userSession.isAntihackFixed) StatusSuccess else BloodRedPrimary
-          ),
-          shape = RoundedCornerShape(10.dp),
-          modifier = Modifier.testTag("fix_antihack_btn")
-        ) {
-          if (isScanningAntihack) {
-            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = NeonGreen)
-          } else if (userSession.isAntihackFixed) {
-            Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(14.dp))
-            Spacer(modifier = Modifier.size(4.dp))
-            Text("FIXED", fontWeight = FontWeight.Bold, fontSize = 11.sp)
-          } else {
-            Icon(Icons.Default.Build, null, modifier = Modifier.size(14.dp))
-            Spacer(modifier = Modifier.size(4.dp))
-            Text("FIX NOW", fontWeight = FontWeight.Bold, fontSize = 11.sp)
-          }
-        }
-      }
-
-      AnimatedVisibility(visible = isScanningAntihack) {
-        Column(modifier = Modifier.padding(top = 10.dp)) {
-          LinearProgressIndicator(
-            progress = { antihackProgress },
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(4.dp)
-              .clip(RoundedCornerShape(2.dp)),
-            color = NeonGreen,
-            trackColor = BloodRedDark.copy(alpha = 0.4f)
-          )
-        }
-      }
-    }
-
-    Spacer(modifier = Modifier.height(14.dp))
-
-    // 4. REMOVE BLACKLIST (Glassy)
-    CyberGlassCard(
-      modifier = Modifier.fillMaxWidth(),
-      isGreenAccent = userSession.isBlacklistRemoved
-    ) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-      ) {
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            text = "• REMOVE BLACKLIST",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
-            color = TextWhite
-          )
-          Text(
-            text = if (userSession.isBlacklistRemoved) "BLACKLIST: 0 ENTRIES DETECTED" else "CLEAR ALL BLACKLIST LOGS",
-            fontSize = 11.sp,
-            color = if (userSession.isBlacklistRemoved) NeonGreenBright else TextMuted
-          )
-        }
-
-        OutlinedButton(
-          onClick = {
-            if (!isPurgingBlacklist) {
-              isPurgingBlacklist = true
-              blacklistProgress = 0f
-              coroutineScope.launch {
-                for (i in 1..10) {
-                  delay(150)
-                  blacklistProgress = i / 10f
-                }
-                isPurgingBlacklist = false
-                onRemoveBlacklist()
-              }
-            }
-          },
-          colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = if (userSession.isBlacklistRemoved) StatusSuccess else BloodRedGlow
-          ),
-          border = androidx.compose.foundation.BorderStroke(
-            1.5.dp,
-            if (userSession.isBlacklistRemoved) StatusSuccess else BloodRedPrimary
-          ),
-          shape = RoundedCornerShape(10.dp),
-          modifier = Modifier.testTag("remove_blacklist_btn")
-        ) {
-          if (isPurgingBlacklist) {
-            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = NeonGreen)
-          } else if (userSession.isBlacklistRemoved) {
-            Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(14.dp))
-            Spacer(modifier = Modifier.size(4.dp))
-            Text("CLEARED", fontWeight = FontWeight.Bold, fontSize = 11.sp)
-          } else {
-            Icon(Icons.Default.CleaningServices, null, modifier = Modifier.size(14.dp))
-            Spacer(modifier = Modifier.size(4.dp))
-            Text("PURGE", fontWeight = FontWeight.Bold, fontSize = 11.sp)
-          }
-        }
-      }
-
-      AnimatedVisibility(visible = isPurgingBlacklist) {
-        Column(modifier = Modifier.padding(top = 10.dp)) {
-          LinearProgressIndicator(
-            progress = { blacklistProgress },
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(4.dp)
-              .clip(RoundedCornerShape(2.dp)),
-            color = BloodRedPrimary,
-            trackColor = CyberDarkBg
-          )
-        }
-      }
-    }
-
-    Spacer(modifier = Modifier.height(14.dp))
-
-    // 5. DEVICE INFO & ACTIVATION KEY (Glassy)
+    // 6. DEVICE TELEMETRY & UNIQUE ACTIVATION KEY (3D Cyber Glass Card)
     CyberGlassCard(
       modifier = Modifier.fillMaxWidth(),
       isGreenAccent = true
     ) {
       Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
       ) {
-        Icon(Icons.Default.Key, null, tint = NeonGreenBright, modifier = Modifier.size(20.dp))
+        Box(
+          modifier = Modifier
+            .size(32.dp)
+            .background(NeonGreenDark, CircleShape)
+            .border(1.dp, NeonGreenBright, CircleShape),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(Icons.Default.Key, null, tint = NeonGreenBright, modifier = Modifier.size(18.dp))
+        }
         Text(
           text = "RIG TELEMETRY & ACTIVATION KEY",
           fontSize = 12.sp,
@@ -590,24 +520,25 @@ fun SafeZoneScreen(
           color = NeonGreenBright
         )
       }
-      Spacer(modifier = Modifier.height(8.dp))
+      Spacer(modifier = Modifier.height(10.dp))
       Column(
         modifier = Modifier
           .fillMaxWidth()
-          .background(CyberDarkBg.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
-          .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+          .background(CyberDarkBg.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+          .border(1.dp, NeonGreen.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+          .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
       ) {
         Text("• RIG MODEL: ${userSession.deviceModel.ifBlank { Build.MODEL }}", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = TextWhite)
         Text("• ANDROID: ${userSession.androidVersion.ifBlank { "Android " + Build.VERSION.RELEASE }}", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = TextWhite)
         Text("• BUILD OS: ${userSession.osVersion.ifBlank { Build.DISPLAY }}", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = TextMuted)
-        Text("• ACTIVATION KEY:\n  ${userSession.activationKey}", fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, color = NeonGreen)
+        Text("• ACTIVATION KEY:\n  ${userSession.activationKey}", fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, color = NeonGreenBright)
       }
     }
 
-    Spacer(modifier = Modifier.height(20.dp))
+    Spacer(modifier = Modifier.height(16.dp))
 
-    // DETAILS SECTION (Glassy)
+    // 7. OFFICIAL ADMIN CONTACTS (3D Cyber Glass Card)
     CyberGlassCard(
       modifier = Modifier.fillMaxWidth(),
       isGreenAccent = false
@@ -623,12 +554,12 @@ fun SafeZoneScreen(
 
       Spacer(modifier = Modifier.height(12.dp))
 
-      // WhatsApp
+      // WhatsApp 3D Contact Row
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .background(CyberDarkBg.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
-          .border(1.dp, NeonGreen.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+          .background(CyberDarkBg.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+          .border(1.5.dp, NeonGreen.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
           .clickable {
             try {
               val num = config.whatsappNumber.replace("+", "").replace(" ", "")
@@ -647,29 +578,37 @@ fun SafeZoneScreen(
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-          Icon(Icons.Default.Send, null, tint = NeonGreenBright)
+          Box(
+            modifier = Modifier
+              .size(32.dp)
+              .background(NeonGreenDark, CircleShape)
+              .border(1.dp, NeonGreenBright, CircleShape),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Default.Send, null, tint = NeonGreenBright, modifier = Modifier.size(16.dp))
+          }
           Column {
             Text(text = "WhatsApp Support", fontSize = 11.sp, color = TextMuted)
             Text(
               text = config.whatsappNumber,
-              fontSize = 14.sp,
+              fontSize = 13.sp,
               fontWeight = FontWeight.Bold,
               color = TextWhite,
               fontFamily = FontFamily.Monospace
             )
           }
         }
-        Text(text = "CHAT >", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = NeonGreenBright)
+        Text(text = "CHAT >", fontSize = 11.sp, fontWeight = FontWeight.Black, color = NeonGreenBright)
       }
 
       Spacer(modifier = Modifier.height(10.dp))
 
-      // Telegram
+      // Telegram 3D Contact Row
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .background(CyberDarkBg.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
-          .border(1.dp, BloodRedPrimary.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+          .background(CyberDarkBg.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+          .border(1.5.dp, BloodRedPrimary.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
           .clickable {
             try {
               val handle = config.telegramHandle.replace("@", "")
@@ -688,36 +627,41 @@ fun SafeZoneScreen(
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-          Icon(Icons.Default.Security, null, tint = BloodRedGlow)
+          Box(
+            modifier = Modifier
+              .size(32.dp)
+              .background(BloodRedDark, CircleShape)
+              .border(1.dp, BloodRedGlow, CircleShape),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Default.Security, null, tint = BloodRedGlow, modifier = Modifier.size(16.dp))
+          }
           Column {
             Text(text = "Telegram Channel", fontSize = 11.sp, color = TextMuted)
             Text(
               text = config.telegramHandle,
-              fontSize = 14.sp,
+              fontSize = 13.sp,
               fontWeight = FontWeight.Bold,
               color = TextWhite,
               fontFamily = FontFamily.Monospace
             )
           }
         }
-        Text(text = "JOIN >", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BloodRedGlow)
+        Text(text = "JOIN >", fontSize = 11.sp, fontWeight = FontWeight.Black, color = BloodRedGlow)
       }
     }
 
     Spacer(modifier = Modifier.height(24.dp))
 
-    // Logout
-    OutlinedButton(
+    // Logout Button (3D Cyber Style)
+    Cyber3DButton(
+      text = "DISCONNECT RIG",
       onClick = onLogout,
-      colors = ButtonDefaults.outlinedButtonColors(contentColor = TextMuted),
-      border = androidx.compose.foundation.BorderStroke(1.dp, TextMuted.copy(alpha = 0.3f)),
-      modifier = Modifier
-        .fillMaxWidth()
-        .testTag("logout_btn")
-    ) {
-      Icon(Icons.Default.Logout, null, modifier = Modifier.size(16.dp))
-      Spacer(modifier = Modifier.size(8.dp))
-      Text("DISCONNECT RIG", fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-    }
+      isGreen = false,
+      icon = Icons.Default.Logout,
+      height = 46.dp,
+      fontSize = 12.sp,
+      testTag = "logout_btn"
+    )
   }
 }

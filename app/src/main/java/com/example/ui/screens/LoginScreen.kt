@@ -1,7 +1,10 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,7 +25,6 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -43,11 +45,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.components.BloodyTitle
+import com.example.ui.components.Cyber3DButton
 import com.example.ui.components.CyberGlassCard
-import com.example.ui.components.GlowingButton
 import com.example.ui.theme.BloodRedPrimary
 import com.example.ui.theme.CyberDarkBg
 import com.example.ui.theme.NeonGreen
@@ -63,10 +65,10 @@ fun LoginScreen(
   isLoading: Boolean,
   modifier: Modifier = Modifier
 ) {
-  var isRegisterMode by remember { mutableStateOf(false) }
   var email by remember { mutableStateOf("") }
   var password by remember { mutableStateOf("") }
   var passwordVisible by remember { mutableStateOf(false) }
+  var isRegisterMode by remember { mutableStateOf(false) }
   var showForgotDialog by remember { mutableStateOf(false) }
   var resetEmail by remember { mutableStateOf("") }
 
@@ -76,59 +78,83 @@ fun LoginScreen(
     modifier = modifier
       .fillMaxSize()
       .verticalScroll(scrollState)
-      .padding(horizontal = 24.dp, vertical = 36.dp),
+      .padding(horizontal = 20.dp, vertical = 32.dp),
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.Center
   ) {
-    // Header - Visceral Bloody Style with Drips
-    com.example.ui.components.BloodyTitle(
-      titleSize = 30.sp,
-      subtitle = if (isRegisterMode) "CREATE NEW ACCOUNT" else "SECURITY AUTHORIZATION",
+    // Header - Visceral 3D Bloody Cyber Title with Specular Drips
+    BloodyTitle(
+      titleSize = 32.sp,
+      subtitle = if (isRegisterMode) "NEW RIG INITIALIZATION" else "SECURITY AUTHORIZATION CONSOLE",
       showDrips = true,
       dropHeight = 16.dp,
-      modifier = Modifier.padding(bottom = 20.dp)
+      modifier = Modifier.padding(bottom = 22.dp)
     )
 
     CyberGlassCard(
       modifier = Modifier.fillMaxWidth(),
-      isGreenAccent = isRegisterMode,
+      isGreenAccent = !isRegisterMode,
       pulsateGlow = true
     ) {
-      // Toggle Tabs
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
+      // 3D Toggle Tabs Box
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .background(CyberDarkBg.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+          .border(1.dp, if (!isRegisterMode) NeonGreen.copy(alpha = 0.4f) else BloodRedPrimary.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+          .padding(4.dp)
       ) {
-        Text(
-          text = "SIGN IN",
-          fontSize = 14.sp,
-          fontWeight = FontWeight.Bold,
-          fontFamily = FontFamily.Monospace,
-          color = if (!isRegisterMode) NeonGreen else TextMuted,
-          modifier = Modifier
-            .clickable { isRegisterMode = false }
-            .padding(8.dp)
-            .testTag("tab_signin")
-        )
-        Text(
-          text = "|",
-          color = TextMuted.copy(alpha = 0.5f),
-          modifier = Modifier.padding(8.dp)
-        )
-        Text(
-          text = "REGISTER",
-          fontSize = 14.sp,
-          fontWeight = FontWeight.Bold,
-          fontFamily = FontFamily.Monospace,
-          color = if (isRegisterMode) BloodRedPrimary else TextMuted,
-          modifier = Modifier
-            .clickable { isRegisterMode = true }
-            .padding(8.dp)
-            .testTag("tab_register")
-        )
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+          Box(
+            modifier = Modifier
+              .weight(1f)
+              .background(
+                if (!isRegisterMode) NeonGreen.copy(alpha = 0.2f) else androidx.compose.ui.graphics.Color.Transparent,
+                RoundedCornerShape(8.dp)
+              )
+              .clickable { isRegisterMode = false }
+              .padding(vertical = 10.dp)
+              .testTag("tab_signin"),
+            contentAlignment = Alignment.Center
+          ) {
+            Text(
+              text = "SIGN IN",
+              fontSize = 13.sp,
+              fontWeight = FontWeight.Black,
+              fontFamily = FontFamily.Monospace,
+              color = if (!isRegisterMode) NeonGreenBright else TextMuted,
+              letterSpacing = 1.sp
+            )
+          }
+
+          Box(
+            modifier = Modifier
+              .weight(1f)
+              .background(
+                if (isRegisterMode) BloodRedPrimary.copy(alpha = 0.2f) else androidx.compose.ui.graphics.Color.Transparent,
+                RoundedCornerShape(8.dp)
+              )
+              .clickable { isRegisterMode = true }
+              .padding(vertical = 10.dp)
+              .testTag("tab_register"),
+            contentAlignment = Alignment.Center
+          ) {
+            Text(
+              text = "REGISTER",
+              fontSize = 13.sp,
+              fontWeight = FontWeight.Black,
+              fontFamily = FontFamily.Monospace,
+              color = if (isRegisterMode) BloodRedPrimary else TextMuted,
+              letterSpacing = 1.sp
+            )
+          }
+        }
       }
 
-      Spacer(modifier = Modifier.height(18.dp))
+      Spacer(modifier = Modifier.height(20.dp))
 
       // Email field
       OutlinedTextField(
@@ -139,7 +165,7 @@ fun LoginScreen(
           Icon(
             imageVector = Icons.Default.Email,
             contentDescription = "Email",
-            tint = if (isRegisterMode) BloodRedPrimary else NeonGreen
+            tint = if (isRegisterMode) BloodRedPrimary else NeonGreenBright
           )
         },
         singleLine = true,
@@ -152,10 +178,10 @@ fun LoginScreen(
           unfocusedTextColor = TextWhite,
           focusedBorderColor = if (isRegisterMode) BloodRedPrimary else NeonGreen,
           unfocusedBorderColor = TextMuted.copy(alpha = 0.4f),
-          focusedContainerColor = CyberDarkBg.copy(alpha = 0.4f),
-          unfocusedContainerColor = CyberDarkBg.copy(alpha = 0.3f)
+          focusedContainerColor = CyberDarkBg.copy(alpha = 0.45f),
+          unfocusedContainerColor = CyberDarkBg.copy(alpha = 0.35f)
         ),
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         modifier = Modifier
           .fillMaxWidth()
           .testTag("email_input")
@@ -172,7 +198,7 @@ fun LoginScreen(
           Icon(
             imageVector = Icons.Default.Lock,
             contentDescription = "Password",
-            tint = if (isRegisterMode) BloodRedPrimary else NeonGreen
+            tint = if (isRegisterMode) BloodRedPrimary else NeonGreenBright
           )
         },
         trailingIcon = {
@@ -200,10 +226,10 @@ fun LoginScreen(
           unfocusedTextColor = TextWhite,
           focusedBorderColor = if (isRegisterMode) BloodRedPrimary else NeonGreen,
           unfocusedBorderColor = TextMuted.copy(alpha = 0.4f),
-          focusedContainerColor = CyberDarkBg.copy(alpha = 0.4f),
-          unfocusedContainerColor = CyberDarkBg.copy(alpha = 0.3f)
+          focusedContainerColor = CyberDarkBg.copy(alpha = 0.45f),
+          unfocusedContainerColor = CyberDarkBg.copy(alpha = 0.35f)
         ),
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         modifier = Modifier
           .fillMaxWidth()
           .testTag("password_input")
@@ -225,18 +251,21 @@ fun LoginScreen(
             Text(
               text = "Forgot password?",
               color = BloodRedPrimary,
-              fontSize = 12.sp
+              fontSize = 12.sp,
+              fontWeight = FontWeight.Bold,
+              fontFamily = FontFamily.Monospace
             )
           }
         }
       } else {
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(18.dp))
       }
 
-      Spacer(modifier = Modifier.height(12.dp))
+      Spacer(modifier = Modifier.height(10.dp))
 
-      // Action Button
-      GlowingButton(
+      // Action 3D Button
+      Cyber3DButton(
+        text = if (isRegisterMode) "CREATE RIG ACCOUNT" else "INITIALIZE ACCESS",
         onClick = {
           if (isRegisterMode) {
             onRegister(email.trim(), password.trim())
@@ -245,53 +274,36 @@ fun LoginScreen(
           }
         },
         isGreen = !isRegisterMode,
+        icon = Icons.Default.VpnKey,
+        isLoading = isLoading,
         enabled = !isLoading,
+        height = 52.dp,
+        fontSize = 13.sp,
         testTag = "auth_action_button"
-      ) {
-        if (isLoading) {
-          CircularProgressIndicator(
-            modifier = Modifier.size(20.dp),
-            strokeWidth = 2.dp,
-            color = CyberDarkBg
-          )
-        } else {
-          Icon(
-            imageVector = Icons.Default.VpnKey,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp)
-          )
-          Spacer(modifier = Modifier.size(8.dp))
-          Text(
-            text = if (isRegisterMode) "CREATE ACCOUNT" else "INITIALIZE ACCESS",
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
-            letterSpacing = 1.sp
-          )
-        }
-      }
+      )
     }
   }
 
-  // Forgot password dialog
+  // Forgot password dialog (3D styled container)
   if (showForgotDialog) {
     AlertDialog(
       onDismissRequest = { showForgotDialog = false },
       title = {
         Text(
-          text = "RESET PASSWORD",
+          text = "RESET ACCESS KEY",
           fontFamily = FontFamily.Monospace,
-          fontWeight = FontWeight.Bold,
+          fontWeight = FontWeight.Black,
           color = BloodRedPrimary
         )
       },
       text = {
         Column {
           Text(
-            text = "Enter your registered email to receive a password reset link.",
+            text = "Enter your registered email to receive an instant password reset transmission.",
             color = TextWhite,
             fontSize = 13.sp
           )
-          Spacer(modifier = Modifier.height(12.dp))
+          Spacer(modifier = Modifier.height(14.dp))
           OutlinedTextField(
             value = resetEmail,
             onValueChange = { resetEmail = it },
@@ -303,6 +315,7 @@ fun LoginScreen(
               focusedBorderColor = NeonGreen,
               unfocusedBorderColor = TextMuted
             ),
+            shape = RoundedCornerShape(10.dp),
             modifier = Modifier.fillMaxWidth()
           )
         }
@@ -314,16 +327,16 @@ fun LoginScreen(
             showForgotDialog = false
           }
         ) {
-          Text("SEND LINK", color = NeonGreen, fontWeight = FontWeight.Bold)
+          Text("SEND LINK", color = NeonGreenBright, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
         }
       },
       dismissButton = {
         TextButton(onClick = { showForgotDialog = false }) {
-          Text("CANCEL", color = TextMuted)
+          Text("CANCEL", color = TextMuted, fontFamily = FontFamily.Monospace)
         }
       },
       containerColor = CyberDarkBg,
-      shape = RoundedCornerShape(16.dp)
+      shape = RoundedCornerShape(18.dp)
     )
   }
 }
