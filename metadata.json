@@ -1,0 +1,6 @@
+{
+  "name": "KRISHNA CONFIG",
+  "description": "3D Cyberpunk protection & configuration panel with blood-red and neon-green theme, video background, and admin control.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

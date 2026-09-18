@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer Red Shield Outline -->
+    <path
+        android:fillColor="#1A0005"
+        android:strokeColor="#FF0033"
+        android:strokeWidth="2.5"
+        android:pathData="M54,22 L78,32 L78,56 C78,72 54,86 54,86 C54,86 30,72 30,56 L30,32 Z" />
+
+    <!-- Neon Green Inner Accents -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#00FF66"
+        android:strokeWidth="1.5"
+        android:pathData="M54,28 L72,36 L72,55 C72,67 54,78 54,78 C54,78 36,67 36,55 L36,36 Z" />
+
+    <!-- Cyberpunk "K" Center Crest -->
+    <path
+        android:fillColor="#00FF66"
+        android:pathData="M46,40 L50,40 L50,68 L46,68 Z" />
+    <path
+        android:fillColor="#FF1744"
+        android:pathData="M50,52 L61,40 L66,40 L54,54 L66,68 L61,68 Z" />
+
+    <!-- Glowing Core Dots -->
+    <path
+        android:fillColor="#00FF66"
+        android:pathData="M54,22 A2,2 0 1,1 54,26 A2,2 0 1,1 54,22" />
+    <path
+        android:fillColor="#FF0033"
+        android:pathData="M54,84 A2,2 0 1,1 54,88 A2,2 0 1,1 54,84" />
+</vector>

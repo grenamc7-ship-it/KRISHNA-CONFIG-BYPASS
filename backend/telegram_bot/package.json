@@ -1,0 +1,13 @@
+{
+  "name": "krishna-telegram-bot",
+  "version": "1.0.0",
+  "description": "Telegram Bot Admin Panel for Krishna Config",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "telegraf": "^4.16.3"
+  }
+}
